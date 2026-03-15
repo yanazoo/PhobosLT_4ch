@@ -72,7 +72,6 @@ bool RX5808::verifyFrequency() {
 
     pinMode(rx5808DataPin, OUTPUT);
     rx5808SerialEnableHigh();
-    delay(2);
 
     digitalWrite(rx5808ClkPin, LOW);
     digitalWrite(rx5808DataPin, LOW);
@@ -126,7 +125,6 @@ void RX5808::setFrequency(uint16_t vtxFreq) {
         rx5808SerialSendBit0();
 
     rx5808SerialEnableHigh();
-    delay(2);
 
     digitalWrite(rx5808ClkPin, LOW);
     digitalWrite(rx5808DataPin, LOW);
@@ -146,30 +144,30 @@ uint8_t RX5808::readRssi() {
 
 void RX5808::rx5808SerialSendBit1() {
     digitalWrite(rx5808DataPin, HIGH);
-    delayMicroseconds(300);
+    delayMicroseconds(1);
     digitalWrite(rx5808ClkPin, HIGH);
-    delayMicroseconds(300);
+    delayMicroseconds(1);
     digitalWrite(rx5808ClkPin, LOW);
-    delayMicroseconds(300);
+    delayMicroseconds(1);
 }
 
 void RX5808::rx5808SerialSendBit0() {
     digitalWrite(rx5808DataPin, LOW);
-    delayMicroseconds(300);
+    delayMicroseconds(1);
     digitalWrite(rx5808ClkPin, HIGH);
-    delayMicroseconds(300);
+    delayMicroseconds(1);
     digitalWrite(rx5808ClkPin, LOW);
-    delayMicroseconds(300);
+    delayMicroseconds(1);
 }
 
 void RX5808::rx5808SerialEnableLow() {
     digitalWrite(rx5808SelPin, LOW);
-    delayMicroseconds(200);
+    delayMicroseconds(10);
 }
 
 void RX5808::rx5808SerialEnableHigh() {
     digitalWrite(rx5808SelPin, HIGH);
-    delayMicroseconds(200);
+    delayMicroseconds(10);
 }
 
 void RX5808::resetRxModule() {

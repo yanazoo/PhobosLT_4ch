@@ -8,7 +8,7 @@
 
 #define WIFI_CONNECTION_TIMEOUT_MS 30000
 #define WIFI_RECONNECT_TIMEOUT_MS 500
-#define WEB_RSSI_SEND_TIMEOUT_MS 200
+#define WEB_RSSI_SEND_TIMEOUT_MS 50
 
 class Webserver {
    public:
@@ -41,4 +41,8 @@ class Webserver {
     uint32_t rssiSentMs = 0;
     uint8_t currentRssi[NUM_PILOTS];
     uint8_t currentSlot = 0;
+
+    bool countdownActive = false;
+    uint32_t countdownStartMs = 0;
+    uint8_t countdownStep = 0;
 };

@@ -405,14 +405,41 @@ async function startRace() {
   clearAllLaps();
   totalLaps = parseInt(el('totalLaps').value) || 0;
 
-  speakJa('機体を準備してください');
-  await sleep(1800);
-  speakJa('5秒以内にスタートします');
-  await sleep(Math.random() * 3000 + 1500);
+  // Tell ESP32 to start countdown buzzer + start timers after 3s
+  fetch('/timer/countdown', { method: 'POST' }).catch(function() {});
 
-  beep(500, 880);
+  // Browser visual + audio countdown
+  var overlay = el('countdownOverlay');
+  var numEl   = el('countdownNum');
+  overlay.style.display = 'flex';
+
+  var steps = [
+    { label: '3', speak: '3',       freq: 880,  dur: 120 },
+    { label: '2', speak: '2',       freq: 880,  dur: 120 },
+    { label: '1', speak: '1',       freq: 880,  dur: 120 },
+    { label: 'GO!', speak: 'スタート', freq: 1320, dur: 600 },
+  ];
+
+  for (var i = 0; i < steps.length; i++) {
+    var s = steps[i];
+    // Re-trigger animation by cloning the element
+    numEl.textContent = s.label;
+    numEl.style.animation = 'none';
+    void numEl.offsetWidth; // reflow
+    numEl.style.animation = '';
+    beep(s.dur, s.freq);
+    // Speak without requiring audioEnabled (countdown always spoken)
+    if (window.speechSynthesis) {
+      var u = new SpeechSynthesisUtterance(s.speak);
+      u.lang = 'ja-JP'; u.rate = 1.3; u.volume = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+    await sleep(1000);
+  }
+
+  overlay.style.display = 'none';
   startTimer();
-  fetch('/timer/start', { method: 'POST' }).catch(function() {});
   el('stopRaceButton').disabled = false;
 }
 

@@ -7,11 +7,12 @@
 #include "webserver.h"
 #include <ElegantOTA.h>
 
-// Time-Division Multiplexing Scanner for 4 pilots using 1 RX5808
-// Cycle: For each pilot, set frequency -> wait settle -> read RSSI -> process lap
-// Total cycle ~4 x 35ms = 140ms (~7Hz per pilot update rate)
+// Adaptive scanner for 4 pilots using 1 RX5808
+// TDM mode when all pilots idle: round-robin at ~125Hz/pilot
+// Priority mode when drone detected (RSSI >= enterRssi): continuous reads ~10000/s
+// Adjacent-frequency bleed-through suppressed via setRssiOnly() for non-priority pilots
 
-#define SCAN_SETTLE_MS 35  // PLL settle time after frequency change
+#define SCAN_SETTLE_MS 2  // PLL settle time after frequency change
 
 static RX5808 rx(PIN_RX5808_RSSI, PIN_RX5808_DATA, PIN_RX5808_SELECT, PIN_RX5808_CLOCK);
 static Config config;
@@ -22,6 +23,9 @@ static LapTimer timers[NUM_PILOTS];
 static BatteryMonitor monitor;
 
 static TaskHandle_t xTimerTask = NULL;
+
+static uint8_t tdmSlot      = 0;
+static uint8_t prioritySlot = NUM_PILOTS;  // NUM_PILOTS = no priority active
 
 // Parallel task on Core 0: handles WiFi, web, buzzer, LED, battery, EEPROM
 static void parallelTask(void *pvArgs) {
@@ -66,37 +70,60 @@ void setup() {
     DEBUG("PhobosLT 4ch ready. Scanning %d pilots.\n", NUM_PILOTS);
 }
 
-// Main loop on Core 1: Time-division frequency scanning
+// Main loop on Core 1: adaptive frequency scanning
 void loop() {
-    for (uint8_t slot = 0; slot < NUM_PILOTS; slot++) {
-        uint16_t freq = config.getFrequency(slot);
+    uint8_t slot;
 
-        // Skip disabled pilots (frequency = 0 or power-down sentinel)
+    if (prioritySlot < NUM_PILOTS) {
+        // Priority mode: keep reading priority pilot without switching frequency
+        slot = prioritySlot;
+    } else {
+        // TDM mode: round-robin through all pilots
+        slot = tdmSlot;
+        tdmSlot = (tdmSlot + 1) % NUM_PILOTS;
+
+        uint16_t freq = config.getFrequency(slot);
         if (freq == 0 || freq == POWER_DOWN_FREQ_MHZ) {
             ws.setRssi(slot, 0);
-            continue;
+            ElegantOTA.loop();
+            return;
         }
 
-        // Switch RX5808 to this pilot's frequency
-        uint16_t currentFreq = rx.getCurrentFrequency();
-        if (currentFreq != freq) {
+        if (rx.getCurrentFrequency() != freq) {
             rx.setFrequency(freq);
-            delay(SCAN_SETTLE_MS);  // Wait for PLL to lock
+            delay(SCAN_SETTLE_MS);
         }
+    }
 
-        // Read RSSI (recentSetFreqFlag is cleared by settle time)
-        // Read raw analog directly since we manage timing ourselves
-        uint16_t rawRssi = analogRead(PIN_RX5808_RSSI);
-        if (rawRssi > 2047) rawRssi = 2047;
-        uint8_t rssi = rawRssi >> 3;
+    uint16_t freq = config.getFrequency(slot);
+    if (freq == 0 || freq == POWER_DOWN_FREQ_MHZ) {
+        prioritySlot = NUM_PILOTS;
+        ElegantOTA.loop();
+        return;
+    }
 
-        // Update lap timer with this RSSI reading
-        uint32_t now = millis();
+    uint16_t rawRssi = analogRead(PIN_RX5808_RSSI);
+    if (rawRssi > 2047) rawRssi = 2047;
+    uint8_t rssi = rawRssi >> 3;
+
+    uint32_t now = millis();
+
+    if (prioritySlot < NUM_PILOTS && slot != prioritySlot) {
+        // Non-priority pilot during priority mode:
+        // Update display RSSI only — suppresses false laps from adjacent-frequency bleed-through
+        timers[slot].setRssiOnly(rssi);
+    } else {
         timers[slot].handleLapTimerUpdate(now, rssi);
+    }
 
-        // Update webserver with current RSSI
-        ws.setRssi(slot, timers[slot].getRssi());
-        ws.setCurrentSlot(slot);
+    ws.setRssi(slot, timers[slot].getRssi());
+    ws.setCurrentSlot(slot);
+
+    // Update priority slot based on current RSSI
+    if (rssi >= config.getEnterRssi(slot)) {
+        prioritySlot = slot;
+    } else if (prioritySlot == slot && rssi < config.getExitRssi(slot)) {
+        prioritySlot = NUM_PILOTS;
     }
 
     ElegantOTA.loop();

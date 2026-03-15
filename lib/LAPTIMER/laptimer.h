@@ -21,6 +21,7 @@ class LapTimer {
     void stop();
     // Accept RSSI value from external scanner instead of reading directly
     void handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue);
+    void setRssiOnly(uint8_t rssiValue);  // update display RSSI without lap detection
     uint8_t getRssi();
     uint32_t getLapTime();
     bool isLapAvailable();
@@ -39,9 +40,8 @@ class LapTimer {
     uint32_t raceStartTimeMs;
     uint32_t startTimeMs;
     uint8_t lapCount;
-    uint8_t rssiCount;
     uint32_t lapTimes[LAPTIMER_LAP_HISTORY];
-    uint8_t rssi[LAPTIMER_RSSI_HISTORY];
+    uint8_t filteredRssi = 0;
 
     uint8_t rssiPeak;
     uint32_t rssiPeakTimeMs;

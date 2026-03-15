@@ -390,3 +390,27 @@ footer a { color: var(--accent); text-decoration: none; }
   #timer { font-size: 32px; }
   .race-buttons { gap: 6px; }
 }
+
+
+/* ========== Countdown Overlay ========== */
+.countdown-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.countdown-num {
+  font-size: 140px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 60px var(--accent), 0 0 120px var(--accent);
+  animation: cdPulse 0.85s ease-out;
+}
+@keyframes cdPulse {
+  0%   { transform: scale(1.6); opacity: 0; }
+  40%  { transform: scale(1.0); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 1; }
+}

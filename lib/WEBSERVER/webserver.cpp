@@ -78,6 +78,25 @@ void Webserver::sendLaptimeEvent(uint8_t pilot, uint32_t lapTime) {
 }
 
 void Webserver::handleWebUpdate(uint32_t currentTimeMs) {
+    // Countdown 3-2-1-GO! then start timers
+    if (countdownActive) {
+        uint32_t elapsed = currentTimeMs - countdownStartMs;
+        if (countdownStep == 0) {
+            buz->beep(120);                          // "3"
+            countdownStep = 1;
+        } else if (elapsed >= 1000 && countdownStep == 1) {
+            buz->beep(120);                          // "2"
+            countdownStep = 2;
+        } else if (elapsed >= 2000 && countdownStep == 2) {
+            buz->beep(120);                          // "1"
+            countdownStep = 3;
+        } else if (elapsed >= 3000 && countdownStep == 3) {
+            buz->beep(600);                          // GO!
+            for (uint8_t i = 0; i < NUM_PILOTS; i++) timers[i].start();
+            countdownActive = false;
+        }
+    }
+
     // Check for lap events from all pilots
     for (uint8_t i = 0; i < NUM_PILOTS; i++) {
         if (timers[i].isLapAvailable()) {
@@ -327,6 +346,15 @@ void Webserver::startServices() {
             }
             request->send(200, "application/json", "{\"status\": \"OK\"}");
         }
+    });
+
+    // 3-2-1 countdown then start all timers
+    server.on("/timer/countdown", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        countdownActive = true;
+        countdownStartMs = millis();
+        countdownStep = 0;
+        request->send(200, "application/json", "{\"status\": \"OK\"}");
+        led->on(200);
     });
 
     server.on("/timer/rssiStart", HTTP_POST, [this](AsyncWebServerRequest *request) {

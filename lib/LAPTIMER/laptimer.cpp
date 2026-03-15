@@ -15,16 +15,16 @@ void LapTimer::init(Config *config, uint8_t pilotIndex, Buzzer *buzzer, Led *l) 
     filter.setProcessNoise(rssi_filter_r * 0.0001f);
 
     stop();
-    memset(rssi, 0, sizeof(rssi));
+    filteredRssi = 0;
 }
 
 void LapTimer::start() {
     DEBUG("LapTimer[%u] started\n", pilot);
     raceStartTimeMs = millis();
+    startTimeMs = raceStartTimeMs;  // ensure minLap guard works from race start
     state = RUNNING;
     lapCountWraparound = false;
     lapCount = 0;
-    rssiCount = 0;
     memset(lapTimes, 0, sizeof(lapTimes));
     rssiPeak = 0;
     rssiPeakTimeMs = 0;
@@ -38,7 +38,6 @@ void LapTimer::stop() {
     state = STOPPED;
     lapCountWraparound = false;
     lapCount = 0;
-    rssiCount = 0;
     memset(lapTimes, 0, sizeof(lapTimes));
     rssiPeak = 0;
     rssiPeakTimeMs = 0;
@@ -49,7 +48,7 @@ void LapTimer::stop() {
 
 void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue) {
     // Apply Kalman filter to incoming RSSI
-    rssi[rssiCount] = round(filter.filter(rssiValue, 0));
+    filteredRssi = round(filter.filter(rssiValue, 0));
 
     switch (state) {
         case STOPPED:
@@ -74,21 +73,19 @@ void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue) {
         default:
             break;
     }
-
-    rssiCount = (rssiCount + 1) % LAPTIMER_RSSI_HISTORY;
 }
 
 void LapTimer::lapPeakCapture() {
-    if (rssi[rssiCount] >= conf->getEnterRssi(pilot)) {
-        if (rssi[rssiCount] > rssiPeak) {
-            rssiPeak = rssi[rssiCount];
+    if (filteredRssi >= conf->getEnterRssi(pilot)) {
+        if (filteredRssi > rssiPeak) {
+            rssiPeak = filteredRssi;
             rssiPeakTimeMs = millis();
         }
     }
 }
 
 bool LapTimer::lapPeakCaptured() {
-    return (rssi[rssiCount] < rssiPeak) && (rssi[rssiCount] < conf->getExitRssi(pilot));
+    return (filteredRssi < rssiPeak) && (filteredRssi < conf->getExitRssi(pilot));
 }
 
 void LapTimer::startLap() {
@@ -114,8 +111,14 @@ void LapTimer::finishLap() {
     lapAvailable = true;
 }
 
+void LapTimer::setRssiOnly(uint8_t rssiValue) {
+    // Update filtered RSSI for display only — no lap detection
+    // Used to suppress false laps from adjacent-frequency bleed-through
+    filteredRssi = round(filter.filter(rssiValue, 0));
+}
+
 uint8_t LapTimer::getRssi() {
-    return rssi[rssiCount];
+    return filteredRssi;
 }
 
 uint32_t LapTimer::getLapTime() {
