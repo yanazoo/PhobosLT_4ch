@@ -51,23 +51,24 @@ function switchTab(name) {
     b.classList.toggle('active', b.dataset.tab === name);
   });
 
-  // Calib: lazily create charts (canvas must be visible for correct dimensions)
   if (name === 'calib') {
-    // Allow browser to lay out the canvas, then init
-    requestAnimationFrame(function() {
-      if (!chartsReady) {
+    if (!chartsReady) {
+      // ★ Key fix: wait 150ms after display:block so browser can compute layout.
+      //   requestAnimationFrame fires before layout is complete in many browsers.
+      //   setTimeout(150) is reliable on both desktop and iOS Safari.
+      setTimeout(function() {
         chartsReady = true;
         for (var i = 0; i < NUM_PILOTS; i++) {
           createRssiChart(i);
           updateChartLines(i);
         }
-      } else {
-        // Restart animation
-        rssiCharts.forEach(function(c) { if (c) c.start(); });
-      }
-    });
+      }, 150);
+    } else {
+      // Charts already created — just restart animation loop
+      rssiCharts.forEach(function(c) { if (c) c.start(); });
+    }
   } else {
-    // Stop charts when not on calib tab to save CPU
+    // Stop animation when not on calib tab (saves CPU/battery)
     rssiCharts.forEach(function(c) { if (c) c.stop(); });
   }
 }
@@ -230,36 +231,56 @@ function updateChartLines(pilot) {
 
 // ── RSSI Charts (lazy init when calib tab opened) ──────────────────────────
 function createRssiChart(pilot) {
-  var canvas = el('rssiChart'+pilot);
+  var canvas = el('rssiChart' + pilot);
+  if (!canvas) { console.error('[Chart] canvas not found: pilot', pilot); return; }
 
-  // Set explicit canvas buffer size matching displayed size
-  var w = canvas.offsetWidth  || canvas.parentElement.clientWidth  || 320;
-  var h = canvas.offsetHeight || 120;
+  // At this point the section is display:block and layout is computed.
+  // canvas.offsetWidth/offsetHeight reflect the CSS-computed size.
+  var w = canvas.offsetWidth;
+  var h = canvas.offsetHeight;
+
+  if (w === 0 || h === 0) {
+    // Fallback: read from parent container
+    var parent = canvas.parentElement;
+    w = parent ? parent.clientWidth  : 300;
+    h = parent ? parent.clientHeight : 130;
+    if (h < 50) h = 130; // minimum sensible height
+  }
+
+  // Set canvas BUFFER to match CSS display size (prevents blurry rendering)
   canvas.width  = w;
   canvas.height = h;
+  console.log('[Chart] pilot', pilot, 'canvas:', w, 'x', h);
 
   var chart = new SmoothieChart({
-    responsive: true,          // auto-resize on window resize
-    millisPerPixel: 50,
+    responsive:      true,   // keeps canvas in sync with CSS on window resize
+    millisPerPixel:  50,
     grid: {
-      strokeStyle:     'rgba(255,255,255,0.08)',
-      sharpLines:      true,
+      strokeStyle:      'rgba(255,255,255,0.12)',
+      sharpLines:       true,
       verticalSections: 4,
-      borderVisible:   false,
-      fillStyle:       '#000000',
+      borderVisible:    false,
+      fillStyle:        '#0d1117',
     },
-    labels: { fillStyle: '#8b949e', precision: 0, fontSize: 10 },
-    maxValue: 180,
+    labels:   { fillStyle: '#8b949e', precision: 0, fontSize: 10 },
+    maxValue: 220,
     minValue: 0,
+    horizontalLines: [],
   });
 
   chart.addTimeSeries(rssiSeries[pilot], {
-    lineWidth:   2,
+    lineWidth:   2.5,
     strokeStyle: PILOT_COLORS[pilot],
     fillStyle:   PILOT_FILL_COLORS[pilot],
   });
 
-  // streamTo starts the animation loop
+  // Seed two data points so the chart shows a line immediately
+  // (without seed, SmoothieChart needs to wait for data to scroll in)
+  var now = Date.now();
+  rssiSeries[pilot].append(now - 12000, rssiValues[pilot]);
+  rssiSeries[pilot].append(now,          rssiValues[pilot]);
+
+  // streamTo() sets canvas reference + starts animation loop
   chart.streamTo(canvas, 250);
   rssiCharts[pilot] = chart;
 }
