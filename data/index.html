@@ -19,18 +19,18 @@
         <h1>PhobosLT 4ch</h1>
         <span id="sseStatus" class="sse-dot disconnected" title="SSE接続状態"></span>
       </div>
-      <nav class="nav-links">
-        <a href="#race">レース</a>
-        <a href="#config">設定</a>
-        <a href="#calib">キャリブ</a>
-        <a href="#ota">更新</a>
+      <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="race"   onclick="switchTab('race')">🏁 レース</button>
+        <button class="tab-btn"        data-tab="config" onclick="switchTab('config')">⚙️ 設定</button>
+        <button class="tab-btn"        data-tab="calib"  onclick="switchTab('calib')">📡 キャリブ</button>
+        <button class="tab-btn"        data-tab="ota"    onclick="switchTab('ota')">🔄 更新</button>
       </nav>
     </div>
   </header>
 
   <main>
     <!-- ===== RACE ===== -->
-    <section id="race" class="section">
+    <section id="race" class="section tab-pane" style="display:block">
       <h2 class="section-title">レース</h2>
       <div class="race-controls">
         <div id="timer">00:00:00</div>
@@ -126,7 +126,7 @@
     </section>
 
     <!-- ===== CONFIG ===== -->
-    <section id="config" class="section">
+    <section id="config" class="section tab-pane" style="display:none">
       <h2 class="section-title">設定</h2>
 
       <div class="config-pilots-grid">
@@ -322,7 +322,7 @@
     </section>
 
     <!-- ===== CALIBRATION ===== -->
-    <section id="calib" class="section">
+    <section id="calib" class="section tab-pane" style="display:none">
       <h2 class="section-title">キャリブレーション</h2>
       <p class="section-desc">RSSIリアルタイム波形と検知閾値の設定。機体を近づけてピーク値を確認し、Enter閾値（入）とExit閾値（出）を調整してください。</p>
 
@@ -450,7 +450,7 @@
     </section>
 
     <!-- ===== OTA ===== -->
-    <section id="ota" class="section">
+    <section id="ota" class="section tab-pane" style="display:none">
       <h2 class="section-title">ファームウェア更新</h2>
       <div class="ota-wrap">
         <iframe src="/update" width="100%" height="520" frameborder="0"></iframe>

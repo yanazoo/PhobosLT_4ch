@@ -18,82 +18,71 @@ const PILOT_FILL_COLORS = ['rgba(88,166,255,0.25)','rgba(248,81,73,0.25)',
                             'rgba(63,185,80,0.25)','rgba(210,153,34,0.25)'];
 
 // ── State ──────────────────────────────────────────────────────────────────
-var pilotConfigs = [];
-var rssiValues   = [0, 0, 0, 0];
-var lapNos       = [-1,-1,-1,-1];
-var lapTimesArr  = [[],[],[],[]];
+var pilotConfigs  = [];
+var rssiValues    = [0, 0, 0, 0];
+var lapNos        = [-1,-1,-1,-1];
+var lapTimesArr   = [[],[],[],[]];
 var timerInterval = null;
 var audioEnabled  = false;
 var announcerRate = 1.0;
 var totalLaps     = 0;
-var rssiCharts    = [];
-var rssiSeries    = [];
+var currentTab    = 'race';
 var speechQueue   = [];
 var isSpeaking    = false;
 
-// ── Init on page load ──────────────────────────────────────────────────────
-window.addEventListener('load', function() {
-  fetch('/config')
-    .then(function(r){ return r.json(); })
-    .then(function(cfg){
-      pilotConfigs = cfg.pilots || [];
-      while (pilotConfigs.length < NUM_PILOTS) {
-        pilotConfigs.push({freq:5658, minLap:100, enterRssi:120, exitRssi:100, name:''});
+// RSSI charts — series created immediately, charts created lazily when calib tab opens
+var rssiSeries  = [new TimeSeries(), new TimeSeries(), new TimeSeries(), new TimeSeries()];
+var rssiCharts  = [null, null, null, null];
+var chartsReady = false;
+
+// ── Tab management ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  currentTab = name;
+
+  // Show / hide panes
+  document.querySelectorAll('.tab-pane').forEach(function(s) {
+    s.style.display = 'none';
+  });
+  var pane = el(name);
+  if (pane) pane.style.display = 'block';
+
+  // Update button states
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+
+  // Calib: lazily create charts (canvas must be visible for correct dimensions)
+  if (name === 'calib') {
+    // Allow browser to lay out the canvas, then init
+    requestAnimationFrame(function() {
+      if (!chartsReady) {
+        chartsReady = true;
+        for (var i = 0; i < NUM_PILOTS; i++) {
+          createRssiChart(i);
+          updateChartLines(i);
+        }
+      } else {
+        // Restart animation
+        rssiCharts.forEach(function(c) { if (c) c.start(); });
       }
-
-      for (var i = 0; i < NUM_PILOTS; i++) {
-        var p = pilotConfigs[i];
-        var name = p.name || ('Pilot ' + (i+1));
-
-        // Config section
-        el('pname'+i).value = p.name || '';
-        setBandChan(i, p.freq || 5658);
-        var ml = (p.minLap || 100) / 10;
-        el('minLap'+i).value  = ml;
-        el('minLapN'+i).value = ml.toFixed(1);
-
-        // Calibration section
-        el('enterRssi'+i).value  = p.enterRssi || 120;
-        el('enterRssiN'+i).value = p.enterRssi || 120;
-        el('exitRssi'+i).value   = p.exitRssi  || 100;
-        el('exitRssiN'+i).value  = p.exitRssi  || 100;
-
-        // Race card header
-        updateRaceCard(i);
-        // Calib header name
-        el('calibName'+i).textContent = name;
-      }
-
-      // Global
-      var alarm = (cfg.alarm || 36) / 10;
-      el('alarmThreshold').value = alarm;
-      el('alarmN').value         = alarm.toFixed(1);
-      el('announcerSelect').selectedIndex = cfg.anType || 0;
-      var rate = (cfg.anRate || 10) / 10;
-      el('rate').value  = rate;
-      el('rateN').value = rate.toFixed(1);
-      announcerRate     = rate;
-
-      // Build RSSI charts (DOM is ready and sections are visible in scroll)
-      for (var j = 0; j < NUM_PILOTS; j++) {
-        createRssiChart(j);
-        updateChartLines(j);
-      }
-    })
-    .catch(function(e){ console.error('Config load error:', e); });
-});
+    });
+  } else {
+    // Stop charts when not on calib tab to save CPU
+    rssiCharts.forEach(function(c) { if (c) c.stop(); });
+  }
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function el(id){ return document.getElementById(id); }
+function el(id) { return document.getElementById(id); }
 
 function showToast(msg, ms) {
   var t = el('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, ms || 2200);
+  setTimeout(function() { t.classList.remove('show'); }, ms || 2200);
 }
 
-function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
 // Slider → Number
 function syncSN(sId, nId, dec) {
@@ -141,12 +130,56 @@ function updateRaceCard(i) {
   var freq = cfg.freq || 0;
   var card = el('raceCard'+i);
   if (!card) return;
-  card.querySelector('.pilot-name').textContent = name;
-  card.querySelector('.pilot-freq-badge').textContent = freq > 0 ? freq+'MHz' : 'OFF';
-  el('calibName'+i).textContent = name;
-  // Update config pilot header label
-  var hdr = card.closest ? null : null; // race card header is read-only
+  card.querySelector('.pilot-name').textContent        = name;
+  card.querySelector('.pilot-freq-badge').textContent  = freq > 0 ? freq+'MHz' : 'OFF';
+  var cn = el('calibName'+i);
+  if (cn) cn.textContent = name;
 }
+
+// ── Init on page load ──────────────────────────────────────────────────────
+window.addEventListener('load', function() {
+  fetch('/config')
+    .then(function(r) { return r.json(); })
+    .then(function(cfg) {
+      pilotConfigs = cfg.pilots || [];
+      while (pilotConfigs.length < NUM_PILOTS) {
+        pilotConfigs.push({freq:5658, minLap:100, enterRssi:120, exitRssi:100, name:''});
+      }
+
+      for (var i = 0; i < NUM_PILOTS; i++) {
+        var p = pilotConfigs[i];
+
+        // Config section
+        el('pname'+i).value = p.name || '';
+        setBandChan(i, p.freq || 5658);
+        var ml = (p.minLap || 100) / 10;
+        el('minLap'+i).value  = ml;
+        el('minLapN'+i).value = ml.toFixed(1);
+
+        // Calibration section
+        el('enterRssi'+i).value  = p.enterRssi || 120;
+        el('enterRssiN'+i).value = p.enterRssi || 120;
+        el('exitRssi'+i).value   = p.exitRssi  || 100;
+        el('exitRssiN'+i).value  = p.exitRssi  || 100;
+
+        // Headers
+        updateRaceCard(i);
+        var cn = el('calibName'+i);
+        if (cn) cn.textContent = p.name || ('Pilot '+(i+1));
+      }
+
+      // Global
+      var alarm = (cfg.alarm || 36) / 10;
+      el('alarmThreshold').value = alarm;
+      el('alarmN').value         = alarm.toFixed(1);
+      el('announcerSelect').selectedIndex = cfg.anType || 0;
+      var rate = (cfg.anRate || 10) / 10;
+      el('rate').value  = rate;
+      el('rateN').value = rate.toFixed(1);
+      announcerRate     = rate;
+    })
+    .catch(function(e) { console.error('Config load error:', e); });
+});
 
 // ── Calibration slider sync ────────────────────────────────────────────────
 function syncCalibSlider(pilot, type) {
@@ -187,66 +220,70 @@ function syncCalibNum(pilot, type) {
 function updateChartLines(pilot) {
   if (!rssiCharts[pilot]) return;
   var enter = parseInt(el('enterRssi'+pilot).value);
-  var exit  = parseInt(el('exitRssi'+pilot).value);
+  var exit_ = parseInt(el('exitRssi'+pilot).value);
   rssiCharts[pilot].options.horizontalLines = [
-    { color: PILOT_COLORS[pilot],  lineWidth: 2,   value: enter },
-    { color: '#d29922',             lineWidth: 1.5, value: exit  },
+    { color: PILOT_COLORS[pilot], lineWidth: 2,   value: enter },
+    { color: '#d29922',            lineWidth: 1.5, value: exit_ },
   ];
-  var peak = Math.max(enter + 30, rssiValues[pilot] + 20, 160);
-  rssiCharts[pilot].options.maxValue = peak;
+  rssiCharts[pilot].options.maxValue = Math.max(enter + 30, rssiValues[pilot] + 20, 150);
 }
 
-// ── RSSI Charts ────────────────────────────────────────────────────────────
+// ── RSSI Charts (lazy init when calib tab opened) ──────────────────────────
 function createRssiChart(pilot) {
-  var series = new TimeSeries();
-  rssiSeries[pilot] = series;
+  var canvas = el('rssiChart'+pilot);
+
+  // Set explicit canvas buffer size matching displayed size
+  var w = canvas.offsetWidth  || canvas.parentElement.clientWidth  || 320;
+  var h = canvas.offsetHeight || 120;
+  canvas.width  = w;
+  canvas.height = h;
 
   var chart = new SmoothieChart({
-    responsive: true,
-    millisPerPixel: 60,
+    responsive: true,          // auto-resize on window resize
+    millisPerPixel: 50,
     grid: {
-      strokeStyle: 'rgba(255,255,255,0.08)',
-      sharpLines: true,
+      strokeStyle:     'rgba(255,255,255,0.08)',
+      sharpLines:      true,
       verticalSections: 4,
-      borderVisible: false,
-      fillStyle: '#000000',
+      borderVisible:   false,
+      fillStyle:       '#000000',
     },
     labels: { fillStyle: '#8b949e', precision: 0, fontSize: 10 },
     maxValue: 180,
     minValue: 0,
   });
 
-  chart.addTimeSeries(series, {
-    lineWidth: 2,
+  chart.addTimeSeries(rssiSeries[pilot], {
+    lineWidth:   2,
     strokeStyle: PILOT_COLORS[pilot],
     fillStyle:   PILOT_FILL_COLORS[pilot],
   });
 
-  chart.streamTo(el('rssiChart'+pilot), 250);
+  // streamTo starts the animation loop
+  chart.streamTo(canvas, 250);
   rssiCharts[pilot] = chart;
 }
 
-// Update RSSI display every 200ms
+// ── RSSI display update (runs always, 200ms) ───────────────────────────────
 setInterval(function() {
   var now = Date.now();
   for (var i = 0; i < NUM_PILOTS; i++) {
     var v = rssiValues[i];
 
-    // Mini bar in race cards
-    var bar = el('rssiBar'+i);
-    var num = el('rssiNum'+i);
+    // Mini bar in race cards (always update)
+    var bar = el('rssiBar'+i), num = el('rssiNum'+i);
     if (bar) bar.style.width = Math.min(100, v / 255 * 100) + '%';
     if (num) num.textContent = v;
 
-    // Calibration live value
+    // Calibration live value (always update even if tab hidden)
     var cv = el('calibRssi'+i);
     if (cv) cv.textContent = v;
 
-    // Chart
-    if (rssiSeries[i]) {
-      rssiSeries[i].append(now, v);
-      updateChartLines(i);
-    }
+    // Append to time series (always — so chart shows recent history when tab opens)
+    rssiSeries[i].append(now, v);
+
+    // Update threshold lines (only if chart exists)
+    updateChartLines(i);
   }
 }, 200);
 
@@ -258,12 +295,13 @@ function savePilotConfig(pilot) {
   var name = el('pname'+pilot).value;
   var ml   = Math.round(parseFloat(el('minLapN'+pilot).value) * 10);
 
-  // Preserve calib thresholds already stored
-  var enter = (pilotConfigs[pilot] && pilotConfigs[pilot].enterRssi) || 120;
-  var exit_ = (pilotConfigs[pilot] && pilotConfigs[pilot].exitRssi)  || 100;
+  // Preserve calibration thresholds
+  var cfg   = pilotConfigs[pilot] || {};
+  var enter = cfg.enterRssi || 120;
+  var exit_ = cfg.exitRssi  || 100;
 
-  var data = { freq: freq, minLap: ml, enterRssi: enter, exitRssi: exit_, name: name };
-  pilotConfigs[pilot] = Object.assign(pilotConfigs[pilot] || {}, data);
+  var data  = { freq: freq, minLap: ml, enterRssi: enter, exitRssi: exit_, name: name };
+  pilotConfigs[pilot] = Object.assign(cfg, data);
   updateRaceCard(pilot);
 
   fetch('/config/pilot?p='+pilot, {
@@ -271,20 +309,20 @@ function savePilotConfig(pilot) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  .then(function(r){ return r.json(); })
-  .then(function(){ showToast('Pilot '+(pilot+1)+' を保存しました ✓'); })
-  .catch(function(){ showToast('保存に失敗しました ✗'); });
+  .then(function(r) { return r.json(); })
+  .then(function() { showToast('Pilot '+(pilot+1)+' を保存しました ✓'); })
+  .catch(function() { showToast('保存に失敗しました ✗'); });
 }
 
 function saveCalibConfig(pilot) {
   var enter = parseInt(el('enterRssi'+pilot).value);
   var exit_ = parseInt(el('exitRssi'+pilot).value);
+  var cfg   = pilotConfigs[pilot] || {};
 
-  var cfg = pilotConfigs[pilot] || {};
   var data = {
-    freq:      cfg.freq      || 5658,
-    minLap:    cfg.minLap    || 100,
-    name:      cfg.name      || ('Pilot '+(pilot+1)),
+    freq:      cfg.freq   || 5658,
+    minLap:    cfg.minLap || 100,
+    name:      cfg.name   || ('Pilot '+(pilot+1)),
     enterRssi: enter,
     exitRssi:  exit_,
   };
@@ -297,9 +335,9 @@ function saveCalibConfig(pilot) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  .then(function(r){ return r.json(); })
-  .then(function(){ showToast('Pilot '+(pilot+1)+' キャリブを保存 ✓'); })
-  .catch(function(){ showToast('保存に失敗しました ✗'); });
+  .then(function(r) { return r.json(); })
+  .then(function() { showToast('Pilot '+(pilot+1)+' キャリブを保存 ✓'); })
+  .catch(function() { showToast('保存に失敗しました ✗'); });
 }
 
 function saveGlobalConfig() {
@@ -313,20 +351,20 @@ function saveGlobalConfig() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ alarm: alarm, anType: anType, anRate: anRate }),
   })
-  .then(function(r){ return r.json(); })
-  .then(function(){ showToast('グローバル設定を保存 ✓'); })
-  .catch(function(){ showToast('保存に失敗しました ✗'); });
+  .then(function(r) { return r.json(); })
+  .then(function() { showToast('グローバル設定を保存 ✓'); })
+  .catch(function() { showToast('保存に失敗しました ✗'); });
 }
 
 // ── Battery voltage ────────────────────────────────────────────────────────
 setInterval(function() {
   fetch('/status')
-    .then(function(r){ return r.text(); })
-    .then(function(t){
+    .then(function(r) { return r.text(); })
+    .then(function(t) {
       var m = t.match(/Battery Voltage:\s*([\d.]+)v/);
       el('bvolt').textContent = m ? m[1]+'v' : '--';
     })
-    .catch(function(){});
+    .catch(function() {});
 }, 4000);
 
 // ── Race management ────────────────────────────────────────────────────────
@@ -336,11 +374,10 @@ function startTimer() {
     ms++;
     if (ms >= 100) { ms = 0; s++; }
     if (s  >= 60)  { s  = 0; m++; }
-    el('timer').textContent =
-      pad(m)+':'+pad(s)+':'+pad(ms);
+    el('timer').textContent = pad(m)+':'+pad(s)+':'+pad(ms);
   }, 10);
 }
-function pad(n){ return n < 10 ? '0'+n : ''+n; }
+function pad(n) { return n < 10 ? '0'+n : ''+n; }
 
 async function startRace() {
   el('startRaceButton').disabled = true;
@@ -354,7 +391,7 @@ async function startRace() {
 
   beep(500, 880);
   startTimer();
-  fetch('/timer/start', { method: 'POST' }).catch(function(){});
+  fetch('/timer/start', { method: 'POST' }).catch(function() {});
   el('stopRaceButton').disabled = false;
 }
 
@@ -362,8 +399,8 @@ function stopRace() {
   speakImmediate('レース終了');
   clearInterval(timerInterval);
   el('timer').textContent = '00:00:00';
-  fetch('/timer/stop', { method: 'POST' }).catch(function(){});
-  el('stopRaceButton').disabled = true;
+  fetch('/timer/stop', { method: 'POST' }).catch(function() {});
+  el('stopRaceButton').disabled  = true;
   el('startRaceButton').disabled = false;
 }
 
@@ -371,7 +408,7 @@ function clearAllLaps() {
   for (var i = 0; i < NUM_PILOTS; i++) {
     var tb = document.querySelector('#lapTable'+i+' tbody');
     if (tb) tb.innerHTML = '';
-    lapNos[i] = -1;
+    lapNos[i]      = -1;
     lapTimesArr[i] = [];
     var badge = document.querySelector('#raceCard'+i+' .pilot-lapcount');
     if (badge) badge.textContent = '';
@@ -409,11 +446,11 @@ function addLap(pilotIdx, lapMs) {
     c3.textContent = s3+'s';
   }
 
-  // Update lap count badge
+  // Lap count badge
   var badge = document.querySelector('#raceCard'+pilotIdx+' .pilot-lapcount');
   if (badge) badge.textContent = lapNo+'周';
 
-  // Goal check
+  // Goal / announce
   if (totalLaps > 0 && lapNo >= totalLaps) {
     speakImmediate(name+' ゴール！ '+lapStr+'秒');
     showToast(name+' ゴール！ '+lapStr+'s', 3000);
@@ -452,7 +489,7 @@ function toggleVoice() {
   if (audioEnabled) {
     btn.textContent = '🔊 音声 ON';
     btn.classList.add('on');
-    // iOS requires user gesture to unlock speech
+    // iOS requires user gesture to unlock speechSynthesis
     if (window.speechSynthesis) {
       var u = new SpeechSynthesisUtterance('音声を有効にしました');
       u.lang = 'ja-JP'; u.volume = 0.5; u.rate = announcerRate;
@@ -472,7 +509,7 @@ function testVoice() {
   speechQueue = []; isSpeaking = false;
   for (var i = 0; i < NUM_PILOTS; i++) {
     var n = (pilotConfigs[i] && pilotConfigs[i].name) || ('パイロット'+(i+1));
-    var u = new SpeechSynthesisUtterance(n+'テスト');
+    var u = new SpeechSynthesisUtterance(n+' テスト');
     u.lang = 'ja-JP'; u.rate = announcerRate;
     window.speechSynthesis.speak(u);
   }
@@ -491,7 +528,7 @@ function speakImmediate(text) {
   var u = new SpeechSynthesisUtterance(text);
   u.lang = 'ja-JP'; u.rate = announcerRate;
   isSpeaking = true;
-  u.onend = u.onerror = function(){ isSpeaking = false; };
+  u.onend = u.onerror = function() { isSpeaking = false; };
   window.speechSynthesis.speak(u);
 }
 
@@ -501,8 +538,8 @@ function processSpeech() {
   var u = new SpeechSynthesisUtterance(text);
   u.lang = 'ja-JP'; u.rate = announcerRate; u.volume = 1;
   isSpeaking = true;
-  u.onend  = function(){ isSpeaking = false; processSpeech(); };
-  u.onerror = function(){ isSpeaking = false; processSpeech(); };
+  u.onend  = function() { isSpeaking = false; processSpeech(); };
+  u.onerror = function() { isSpeaking = false; processSpeech(); };
   window.speechSynthesis.speak(u);
 }
 
@@ -511,11 +548,9 @@ function beep(duration, freq) {
   try {
     var ctx = new (window.AudioContext || window.webkitAudioContext)();
     var osc = ctx.createOscillator();
-    osc.type = 'square';
-    osc.frequency.value = freq || 880;
-    osc.connect(ctx.destination);
-    osc.start();
-    setTimeout(function(){ osc.stop(); ctx.close(); }, duration || 200);
+    osc.type = 'square'; osc.frequency.value = freq || 880;
+    osc.connect(ctx.destination); osc.start();
+    setTimeout(function() { osc.stop(); ctx.close(); }, duration || 200);
   } catch(e) {}
 }
 
