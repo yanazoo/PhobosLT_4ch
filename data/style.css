@@ -1,0 +1,325 @@
+:root {
+  --primary-color: #7cb5ec;
+  --primary-color-dark: #5a9bd8;
+  --secondary-color: #434348;
+  --background-color: #f8f9fa;
+  --text-color: #333;
+  --border-color: #dee2e6;
+  --pilot0-color: hsl(214, 53%, 60%);
+  --pilot1-color: hsl(0, 70%, 60%);
+  --pilot2-color: hsl(120, 50%, 50%);
+  --pilot3-color: hsl(45, 90%, 55%);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 12px 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo h1 {
+  margin-left: 12px;
+  font-size: 24px;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 12px;
+  padding-top: 8px;
+  justify-content: space-around;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+main {
+  margin: 8px;
+  padding: 0 8px;
+  flex-grow: 1;
+}
+
+.tabcontent {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+}
+
+/* Pilot sub-tabs */
+.pilot-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.pilot-tab {
+  flex: 1;
+  margin: 0;
+  padding: 8px 4px;
+  font-size: 14px;
+  border-radius: 4px 4px 0 0;
+  opacity: 0.7;
+}
+
+.pilot-tab:nth-child(1) { background-color: var(--pilot0-color); }
+.pilot-tab:nth-child(2) { background-color: var(--pilot1-color); }
+.pilot-tab:nth-child(3) { background-color: var(--pilot2-color); }
+.pilot-tab:nth-child(4) { background-color: var(--pilot3-color); }
+
+.pilot-tab.active {
+  opacity: 1;
+  font-weight: bold;
+}
+
+/* Config items */
+.config-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#bandChannelFreq {
+  display: flex;
+  gap: 16px;
+}
+
+#bandChannelFreq label {
+  min-width: 0px;
+  padding-right: 8px;
+}
+
+.config-item {
+  display: flex;
+}
+
+.config-item label {
+  min-width: 150px;
+  font-weight: bold;
+}
+
+.config-item input[type="text"],
+.config-item input[type="password"],
+.config-item select,
+.input-with-value {
+  flex: 1;
+}
+
+.config-item select {
+  min-width: 50px;
+}
+
+.input-with-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-with-value input[type="range"] {
+  flex-grow: 1;
+}
+
+.input-with-value .val {
+  width: 40px;
+  text-align: left;
+}
+
+#freqOutput {
+  font-weight: bold;
+}
+
+button {
+  margin: 6px 0;
+  padding: 8px 12px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: var(--primary-color-dark);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Race layout */
+.racebuttons {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 8px;
+}
+
+#timer {
+  font-size: 24px;
+  font-weight: bold;
+  display: block;
+  text-align: center;
+}
+
+.pilot-race-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pilot-race-card {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pilot-header {
+  padding: 6px 8px;
+  color: white;
+  font-size: 14px;
+  margin: 0;
+}
+
+.pilot-header.p0 { background-color: var(--pilot0-color); }
+.pilot-header.p1 { background-color: var(--pilot1-color); }
+.pilot-header.p2 { background-color: var(--pilot2-color); }
+.pilot-header.p3 { background-color: var(--pilot3-color); }
+
+.pilot-freq {
+  font-weight: normal;
+  font-size: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+table th,
+table td {
+  padding: 3px 4px;
+  border: 1px solid var(--border-color);
+}
+
+table th {
+  background-color: #eee;
+  font-weight: normal;
+  font-size: 11px;
+}
+
+table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Calibration charts */
+.rssi-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rssi-chart-item {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.rssi-chart-item h4 {
+  padding: 4px 8px;
+  color: white;
+  margin: 0 0 4px 0;
+  border-radius: 2px;
+  font-size: 13px;
+}
+
+.rssi-chart-item h4.p0 { background-color: var(--pilot0-color); }
+.rssi-chart-item h4.p1 { background-color: var(--pilot1-color); }
+.rssi-chart-item h4.p2 { background-color: var(--pilot2-color); }
+.rssi-chart-item h4.p3 { background-color: var(--pilot3-color); }
+
+.rssi-val {
+  font-weight: bold;
+}
+
+.rssi-chart-item canvas {
+  width: 100%;
+  height: 150px;
+}
+
+footer {
+  text-align: center;
+  padding: 12px;
+  background-color: var(--primary-color);
+  color: white;
+  font-size: 13px;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .pilot-race-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rssi-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .config-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .config-item label {
+    min-width: auto;
+  }
+
+  #bandChannelFreq {
+    flex-wrap: wrap;
+  }
+
+  .logo h1 {
+    font-size: 18px;
+  }
+}
