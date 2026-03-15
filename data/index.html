@@ -1,220 +1,468 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PhobosLT 4ch</title>
-    <link rel="icon" type="image/png" href="favicon.ico" />
-    <link rel="stylesheet" type="text/css" href="style.css" />
-    <script src="jquery-3.7.1.min.js"></script>
-    <script src="articulate.min.js"></script>
-    <script src="smoothie.js"></script>
-  </head>
-
-  <body>
-    <header>
-      <nav>
-        <div class="logo">
-          <img src="favicon.ico" alt="PLT" width="48" />
-          <h1>PhobosLT 4ch</h1>
-        </div>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>PhobosLT 4ch</title>
+  <link rel="icon" type="image/png" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <script src="jquery-3.7.1.min.js"></script>
+  <script src="smoothie.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <img src="favicon.ico" alt="PLT" width="32">
+        <h1>PhobosLT 4ch</h1>
+        <span id="sseStatus" class="sse-dot disconnected" title="SSE接続状態"></span>
+      </div>
+      <nav class="nav-links">
+        <a href="#race">レース</a>
+        <a href="#config">設定</a>
+        <a href="#calib">キャリブ</a>
+        <a href="#ota">更新</a>
       </nav>
-      <ul class="nav-links">
-        <li><a id="nav-link-config" class="tablinks active" onclick="openTab(event, 'config')">Config</a></li>
-        <li><a id="nav-link-race" class="tablinks" onclick="openTab(event, 'race')">Race</a></li>
-        <li><a id="nav-link-calib" class="tablinks" onclick="openTab(event, 'calib')">Calibration</a></li>
-        <li><a id="nav-link-ota" class="tablinks" onclick="openTab(event, 'ota')">Update</a></li>
-      </ul>
-    </header>
+    </div>
+  </header>
 
-    <main>
-      <!-- Configuration Tab -->
-      <div id="config" class="tabcontent">
-        <div class="pilot-tabs">
-          <button class="pilot-tab active" onclick="selectPilot(0)">Pilot 1</button>
-          <button class="pilot-tab" onclick="selectPilot(1)">Pilot 2</button>
-          <button class="pilot-tab" onclick="selectPilot(2)">Pilot 3</button>
-          <button class="pilot-tab" onclick="selectPilot(3)">Pilot 4</button>
+  <main>
+    <!-- ===== RACE ===== -->
+    <section id="race" class="section">
+      <h2 class="section-title">レース</h2>
+      <div class="race-controls">
+        <div id="timer">00:00:00</div>
+        <div class="race-buttons">
+          <button id="startRaceButton" onclick="startRace()" class="btn-success">▶ スタート</button>
+          <button id="stopRaceButton" onclick="stopRace()" disabled class="btn-danger">■ ストップ</button>
+          <button onclick="clearAllLaps()" class="btn-secondary">クリア</button>
+        </div>
+        <div class="lap-count-row">
+          <label for="totalLaps">総周回数:</label>
+          <input type="number" id="totalLaps" min="0" max="99" value="0">
+          <span class="hint">（0=無制限）</span>
+        </div>
+      </div>
+
+      <div class="pilot-race-grid">
+        <div class="pilot-race-card" id="raceCard0">
+          <div class="pilot-card-header p0">
+            <span class="pilot-name">Pilot 1</span>
+            <span class="pilot-freq-badge"></span>
+            <span class="pilot-lapcount"></span>
+          </div>
+          <div class="rssi-mini-bar">
+            <span class="rssi-mini-label">RSSI</span>
+            <div class="rssi-mini-track"><div class="rssi-mini-fill p0-fill" id="rssiBar0"></div></div>
+            <span class="rssi-mini-val" id="rssiNum0">0</span>
+          </div>
+          <div class="lap-table-wrap">
+            <table class="lapTable" id="lapTable0">
+              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="config-container">
-          <div id="bandChannelFreq">
-            <div class="config-item">
-              <label for="bandSelect">Band:</label>
-              <select id="bandSelect">
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="E">E</option>
-                <option value="F">F</option>
-                <option value="R">R</option>
-                <option value="L">L</option>
-              </select>
-            </div>
-            <div class="config-item">
-              <label for="channelSelect">Channel:</label>
-              <select id="channelSelect">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-              </select>
-            </div>
-            <div class="config-item">
-              <span id="freqOutput"></span>
-            </div>
+        <div class="pilot-race-card" id="raceCard1">
+          <div class="pilot-card-header p1">
+            <span class="pilot-name">Pilot 2</span>
+            <span class="pilot-freq-badge"></span>
+            <span class="pilot-lapcount"></span>
           </div>
-
-          <div class="config-item">
-            <label for="pname">Pilot name:</label>
-            <input type="text" id="pname" maxlength="20" />
+          <div class="rssi-mini-bar">
+            <span class="rssi-mini-label">RSSI</span>
+            <div class="rssi-mini-track"><div class="rssi-mini-fill p1-fill" id="rssiBar1"></div></div>
+            <span class="rssi-mini-val" id="rssiNum1">0</span>
           </div>
-
-          <div class="config-item">
-            <label for="minLap">Min Lap Time:</label>
-            <div class="input-with-value">
-              <span class="val">10.0s</span>
-              <input type="range" id="minLap" step="0.5" min="1" max="20" oninput="updateMinLap(this,value)" />
-            </div>
+          <div class="lap-table-wrap">
+            <table class="lapTable" id="lapTable1">
+              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <tbody></tbody>
+            </table>
           </div>
-
-          <div class="config-item">
-            <label for="enterRssiCfg">Enter RSSI:</label>
-            <div class="input-with-value">
-              <span id="enterSpanCfg" class="val">120</span>
-              <input type="range" min="50" max="255" step="1" id="enterRssiCfg" value="120" oninput="updateEnterRssiCfg(this,value)" />
-            </div>
-          </div>
-
-          <div class="config-item">
-            <label for="exitRssiCfg">Exit RSSI:</label>
-            <div class="input-with-value">
-              <span id="exitSpanCfg" class="val">100</span>
-              <input type="range" min="50" max="255" step="1" id="exitRssiCfg" value="100" oninput="updateExitRssiCfg(this,value)" />
-            </div>
-          </div>
-
-          <button onclick="savePilotConfig()">Save Pilot Config</button>
         </div>
 
-        <hr style="margin: 16px 0;" />
+        <div class="pilot-race-card" id="raceCard2">
+          <div class="pilot-card-header p2">
+            <span class="pilot-name">Pilot 3</span>
+            <span class="pilot-freq-badge"></span>
+            <span class="pilot-lapcount"></span>
+          </div>
+          <div class="rssi-mini-bar">
+            <span class="rssi-mini-label">RSSI</span>
+            <div class="rssi-mini-track"><div class="rssi-mini-fill p2-fill" id="rssiBar2"></div></div>
+            <span class="rssi-mini-val" id="rssiNum2">0</span>
+          </div>
+          <div class="lap-table-wrap">
+            <table class="lapTable" id="lapTable2">
+              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
 
-        <div class="config-container">
-          <h3>Global Settings</h3>
-          <div class="config-item">
-            <label for="alarmThreshold">Low Battery Alarm:</label>
-            <div class="input-with-value">
-              <span class="val">3.6v</span>
-              <input type="range" id="alarmThreshold" step="0.1" min="0.0" max="3.6" oninput="updateAlarmThreshold(this,value)" />
+        <div class="pilot-race-card" id="raceCard3">
+          <div class="pilot-card-header p3">
+            <span class="pilot-name">Pilot 4</span>
+            <span class="pilot-freq-badge"></span>
+            <span class="pilot-lapcount"></span>
+          </div>
+          <div class="rssi-mini-bar">
+            <span class="rssi-mini-label">RSSI</span>
+            <div class="rssi-mini-track"><div class="rssi-mini-fill p3-fill" id="rssiBar3"></div></div>
+            <span class="rssi-mini-val" id="rssiNum3">0</span>
+          </div>
+          <div class="lap-table-wrap">
+            <table class="lapTable" id="lapTable3">
+              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CONFIG ===== -->
+    <section id="config" class="section">
+      <h2 class="section-title">設定</h2>
+
+      <div class="config-pilots-grid">
+        <!-- Pilot 0 -->
+        <div class="config-pilot-card p0-border">
+          <h3 class="config-pilot-header p0">Pilot 1</h3>
+          <div class="config-items">
+            <div class="config-row">
+              <label>パイロット名</label>
+              <input type="text" id="pname0" maxlength="20" placeholder="Pilot 1">
+            </div>
+            <div class="config-row">
+              <label>バンド / チャンネル</label>
+              <div class="band-ch-row">
+                <select id="bandSelect0" onchange="updateFreq(0)">
+                  <option>A</option><option>B</option><option>E</option>
+                  <option>F</option><option>R</option><option>L</option>
+                </select>
+                <select id="chanSelect0" onchange="updateFreq(0)">
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+                <span id="freqDisplay0" class="freq-badge">---</span>
+              </div>
+            </div>
+            <div class="config-row">
+              <label>最小ラップ時間</label>
+              <div class="slider-num">
+                <input type="range" id="minLap0" min="1" max="25" step="0.5" value="10"
+                  oninput="syncSN('minLap0','minLapN0',1)">
+                <input type="number" id="minLapN0" min="1" max="25" step="0.5" value="10"
+                  oninput="syncNS('minLapN0','minLap0',1,25)">
+                <span class="unit">s</span>
+              </div>
             </div>
           </div>
+          <button onclick="savePilotConfig(0)" class="btn-save">💾 保存</button>
+        </div>
 
-          <div class="config-item">
-            <label for="announcerSelect">Announcer Type:</label>
+        <!-- Pilot 1 -->
+        <div class="config-pilot-card p1-border">
+          <h3 class="config-pilot-header p1">Pilot 2</h3>
+          <div class="config-items">
+            <div class="config-row">
+              <label>パイロット名</label>
+              <input type="text" id="pname1" maxlength="20" placeholder="Pilot 2">
+            </div>
+            <div class="config-row">
+              <label>バンド / チャンネル</label>
+              <div class="band-ch-row">
+                <select id="bandSelect1" onchange="updateFreq(1)">
+                  <option>A</option><option>B</option><option>E</option>
+                  <option>F</option><option>R</option><option>L</option>
+                </select>
+                <select id="chanSelect1" onchange="updateFreq(1)">
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+                <span id="freqDisplay1" class="freq-badge">---</span>
+              </div>
+            </div>
+            <div class="config-row">
+              <label>最小ラップ時間</label>
+              <div class="slider-num">
+                <input type="range" id="minLap1" min="1" max="25" step="0.5" value="10"
+                  oninput="syncSN('minLap1','minLapN1',1)">
+                <input type="number" id="minLapN1" min="1" max="25" step="0.5" value="10"
+                  oninput="syncNS('minLapN1','minLap1',1,25)">
+                <span class="unit">s</span>
+              </div>
+            </div>
+          </div>
+          <button onclick="savePilotConfig(1)" class="btn-save">💾 保存</button>
+        </div>
+
+        <!-- Pilot 2 -->
+        <div class="config-pilot-card p2-border">
+          <h3 class="config-pilot-header p2">Pilot 3</h3>
+          <div class="config-items">
+            <div class="config-row">
+              <label>パイロット名</label>
+              <input type="text" id="pname2" maxlength="20" placeholder="Pilot 3">
+            </div>
+            <div class="config-row">
+              <label>バンド / チャンネル</label>
+              <div class="band-ch-row">
+                <select id="bandSelect2" onchange="updateFreq(2)">
+                  <option>A</option><option>B</option><option>E</option>
+                  <option>F</option><option>R</option><option>L</option>
+                </select>
+                <select id="chanSelect2" onchange="updateFreq(2)">
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+                <span id="freqDisplay2" class="freq-badge">---</span>
+              </div>
+            </div>
+            <div class="config-row">
+              <label>最小ラップ時間</label>
+              <div class="slider-num">
+                <input type="range" id="minLap2" min="1" max="25" step="0.5" value="10"
+                  oninput="syncSN('minLap2','minLapN2',1)">
+                <input type="number" id="minLapN2" min="1" max="25" step="0.5" value="10"
+                  oninput="syncNS('minLapN2','minLap2',1,25)">
+                <span class="unit">s</span>
+              </div>
+            </div>
+          </div>
+          <button onclick="savePilotConfig(2)" class="btn-save">💾 保存</button>
+        </div>
+
+        <!-- Pilot 3 -->
+        <div class="config-pilot-card p3-border">
+          <h3 class="config-pilot-header p3">Pilot 4</h3>
+          <div class="config-items">
+            <div class="config-row">
+              <label>パイロット名</label>
+              <input type="text" id="pname3" maxlength="20" placeholder="Pilot 4">
+            </div>
+            <div class="config-row">
+              <label>バンド / チャンネル</label>
+              <div class="band-ch-row">
+                <select id="bandSelect3" onchange="updateFreq(3)">
+                  <option>A</option><option>B</option><option>E</option>
+                  <option>F</option><option>R</option><option>L</option>
+                </select>
+                <select id="chanSelect3" onchange="updateFreq(3)">
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+                <span id="freqDisplay3" class="freq-badge">---</span>
+              </div>
+            </div>
+            <div class="config-row">
+              <label>最小ラップ時間</label>
+              <div class="slider-num">
+                <input type="range" id="minLap3" min="1" max="25" step="0.5" value="10"
+                  oninput="syncSN('minLap3','minLapN3',1)">
+                <input type="number" id="minLapN3" min="1" max="25" step="0.5" value="10"
+                  oninput="syncNS('minLapN3','minLap3',1,25)">
+                <span class="unit">s</span>
+              </div>
+            </div>
+          </div>
+          <button onclick="savePilotConfig(3)" class="btn-save">💾 保存</button>
+        </div>
+      </div>
+
+      <!-- Global Settings -->
+      <div class="global-config-card">
+        <h3 class="global-title">グローバル設定</h3>
+        <div class="config-items">
+          <div class="config-row">
+            <label>低電圧アラーム</label>
+            <div class="slider-num">
+              <input type="range" id="alarmThreshold" min="0" max="4.2" step="0.1" value="3.6"
+                oninput="syncSN('alarmThreshold','alarmN',1)">
+              <input type="number" id="alarmN" min="0" max="4.2" step="0.1" value="3.6"
+                oninput="syncNS('alarmN','alarmThreshold',1,4.2)">
+              <span class="unit">v</span>
+            </div>
+          </div>
+          <div class="config-row">
+            <label>アナウンス種別</label>
             <select id="announcerSelect">
-              <option value="none">None</option>
-              <option value="beep">Beep</option>
-              <option value="1lap">Lap Time</option>
-              <option value="2lap">2 Consecutive Laps</option>
-              <option value="3lap">3 Consecutive Laps</option>
+              <option value="none">なし</option>
+              <option value="beep">ビープ音</option>
+              <option value="1lap">ラップタイム読み上げ</option>
+              <option value="2lap">2ラップ合計読み上げ</option>
+              <option value="3lap">3ラップ合計読み上げ</option>
             </select>
           </div>
-
-          <div class="config-item">
-            <label for="rate">Announcer Rate:</label>
-            <div class="input-with-value">
-              <span class="val">1.0</span>
-              <input type="range" min="0.1" max="2" step="0.1" id="rate" oninput="updateAnnouncerRate(this,value)" />
+          <div class="config-row">
+            <label>読み上げ速度</label>
+            <div class="slider-num">
+              <input type="range" id="rate" min="0.5" max="2.0" step="0.1" value="1.0"
+                oninput="syncSN('rate','rateN',1)">
+              <input type="number" id="rateN" min="0.5" max="2.0" step="0.1" value="1.0"
+                oninput="syncNS('rateN','rate',1,2.0)">
             </div>
           </div>
-
-          <div class="config-item">
-            <label for="bvolt">Battery voltage:</label>
-            <span class="val" id="bvolt"></span>
+          <div class="config-row">
+            <label>バッテリー電圧</label>
+            <span id="bvolt" class="value-display">--</span>
           </div>
+        </div>
+        <div class="voice-row">
+          <button id="voiceToggleBtn" onclick="toggleVoice()" class="btn-voice">🔇 音声 OFF</button>
+          <button onclick="testVoice()" class="btn-secondary">🔊 テスト</button>
+        </div>
+        <button onclick="saveGlobalConfig()" class="btn-save">💾 グローバル設定を保存</button>
+      </div>
+    </section>
 
-          <button id="EnableAudioButton" onclick="enableAudioLoop()">Enable voice</button>
-          <button id="DisableAudioButton" onclick="disableAudioLoop()">Disable voice</button>
-          <button id="GenerateAudioButton" onclick="generateAudio()">Test voice</button>
-          <br />
-          <button onclick="saveGlobalConfig()">Save Global Config</button>
+    <!-- ===== CALIBRATION ===== -->
+    <section id="calib" class="section">
+      <h2 class="section-title">キャリブレーション</h2>
+      <p class="section-desc">RSSIリアルタイム波形と検知閾値の設定。機体を近づけてピーク値を確認し、Enter閾値（入）とExit閾値（出）を調整してください。</p>
+
+      <div class="calib-grid">
+        <!-- Calib 0 -->
+        <div class="calib-card">
+          <div class="calib-header p0">
+            <span id="calibName0">Pilot 1</span>
+            <span class="rssi-live-badge">RSSI: <strong id="calibRssi0">0</strong></span>
+          </div>
+          <canvas id="rssiChart0" height="100"></canvas>
+          <div class="calib-sliders">
+            <div class="config-row">
+              <label>Enter閾値（入）</label>
+              <div class="slider-num">
+                <input type="range" id="enterRssi0" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibSlider(0,'enter')">
+                <input type="number" id="enterRssiN0" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibNum(0,'enter')">
+              </div>
+            </div>
+            <div class="config-row">
+              <label>Exit閾値（出）</label>
+              <div class="slider-num">
+                <input type="range" id="exitRssi0" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibSlider(0,'exit')">
+                <input type="number" id="exitRssiN0" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibNum(0,'exit')">
+              </div>
+            </div>
+          </div>
+          <button onclick="saveCalibConfig(0)" class="btn-save">💾 保存</button>
+        </div>
+
+        <!-- Calib 1 -->
+        <div class="calib-card">
+          <div class="calib-header p1">
+            <span id="calibName1">Pilot 2</span>
+            <span class="rssi-live-badge">RSSI: <strong id="calibRssi1">0</strong></span>
+          </div>
+          <canvas id="rssiChart1" height="100"></canvas>
+          <div class="calib-sliders">
+            <div class="config-row">
+              <label>Enter閾値（入）</label>
+              <div class="slider-num">
+                <input type="range" id="enterRssi1" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibSlider(1,'enter')">
+                <input type="number" id="enterRssiN1" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibNum(1,'enter')">
+              </div>
+            </div>
+            <div class="config-row">
+              <label>Exit閾値（出）</label>
+              <div class="slider-num">
+                <input type="range" id="exitRssi1" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibSlider(1,'exit')">
+                <input type="number" id="exitRssiN1" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibNum(1,'exit')">
+              </div>
+            </div>
+          </div>
+          <button onclick="saveCalibConfig(1)" class="btn-save">💾 保存</button>
+        </div>
+
+        <!-- Calib 2 -->
+        <div class="calib-card">
+          <div class="calib-header p2">
+            <span id="calibName2">Pilot 3</span>
+            <span class="rssi-live-badge">RSSI: <strong id="calibRssi2">0</strong></span>
+          </div>
+          <canvas id="rssiChart2" height="100"></canvas>
+          <div class="calib-sliders">
+            <div class="config-row">
+              <label>Enter閾値（入）</label>
+              <div class="slider-num">
+                <input type="range" id="enterRssi2" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibSlider(2,'enter')">
+                <input type="number" id="enterRssiN2" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibNum(2,'enter')">
+              </div>
+            </div>
+            <div class="config-row">
+              <label>Exit閾値（出）</label>
+              <div class="slider-num">
+                <input type="range" id="exitRssi2" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibSlider(2,'exit')">
+                <input type="number" id="exitRssiN2" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibNum(2,'exit')">
+              </div>
+            </div>
+          </div>
+          <button onclick="saveCalibConfig(2)" class="btn-save">💾 保存</button>
+        </div>
+
+        <!-- Calib 3 -->
+        <div class="calib-card">
+          <div class="calib-header p3">
+            <span id="calibName3">Pilot 4</span>
+            <span class="rssi-live-badge">RSSI: <strong id="calibRssi3">0</strong></span>
+          </div>
+          <canvas id="rssiChart3" height="100"></canvas>
+          <div class="calib-sliders">
+            <div class="config-row">
+              <label>Enter閾値（入）</label>
+              <div class="slider-num">
+                <input type="range" id="enterRssi3" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibSlider(3,'enter')">
+                <input type="number" id="enterRssiN3" min="50" max="255" step="1" value="120"
+                  oninput="syncCalibNum(3,'enter')">
+              </div>
+            </div>
+            <div class="config-row">
+              <label>Exit閾値（出）</label>
+              <div class="slider-num">
+                <input type="range" id="exitRssi3" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibSlider(3,'exit')">
+                <input type="number" id="exitRssiN3" min="50" max="255" step="1" value="100"
+                  oninput="syncCalibNum(3,'exit')">
+              </div>
+            </div>
+          </div>
+          <button onclick="saveCalibConfig(3)" class="btn-save">💾 保存</button>
         </div>
       </div>
+    </section>
 
-      <!-- Race Tab -->
-      <div id="race" class="tabcontent">
-        <span id="timer">00:00:00s</span>
-        <div class="racebuttons">
-          <button id="startRaceButton" onclick="startRace()">Start Race</button>
-          <button id="stopRaceButton" onclick="stopRace()" disabled>Stop Race</button>
-          <button id="clearLapsButton" onclick="clearAllLaps()">Clear Laps</button>
-        </div>
-
-        <div class="pilot-race-grid">
-          <div class="pilot-race-card" id="raceCard0">
-            <h3 class="pilot-header p0">Pilot 1 <span class="pilot-freq"></span></h3>
-            <table class="lapTable" id="lapTable0">
-              <tr><th>Lap</th><th>Time</th><th>2 Lap</th><th>3 Lap</th></tr>
-            </table>
-          </div>
-          <div class="pilot-race-card" id="raceCard1">
-            <h3 class="pilot-header p1">Pilot 2 <span class="pilot-freq"></span></h3>
-            <table class="lapTable" id="lapTable1">
-              <tr><th>Lap</th><th>Time</th><th>2 Lap</th><th>3 Lap</th></tr>
-            </table>
-          </div>
-          <div class="pilot-race-card" id="raceCard2">
-            <h3 class="pilot-header p2">Pilot 3 <span class="pilot-freq"></span></h3>
-            <table class="lapTable" id="lapTable2">
-              <tr><th>Lap</th><th>Time</th><th>2 Lap</th><th>3 Lap</th></tr>
-            </table>
-          </div>
-          <div class="pilot-race-card" id="raceCard3">
-            <h3 class="pilot-header p3">Pilot 4 <span class="pilot-freq"></span></h3>
-            <table class="lapTable" id="lapTable3">
-              <tr><th>Lap</th><th>Time</th><th>2 Lap</th><th>3 Lap</th></tr>
-            </table>
-          </div>
-        </div>
+    <!-- ===== OTA ===== -->
+    <section id="ota" class="section">
+      <h2 class="section-title">ファームウェア更新</h2>
+      <div class="ota-wrap">
+        <iframe src="/update" width="100%" height="520" frameborder="0"></iframe>
       </div>
+    </section>
+  </main>
 
-      <!-- Calibration Tab -->
-      <div id="calib" class="tabcontent">
-        <div class="rssi-charts">
-          <div class="rssi-chart-item" id="rssiBlock0">
-            <h4 class="p0">Pilot 1: <span class="rssi-val">0</span></h4>
-            <canvas id="rssiChart0"></canvas>
-          </div>
-          <div class="rssi-chart-item" id="rssiBlock1">
-            <h4 class="p1">Pilot 2: <span class="rssi-val">0</span></h4>
-            <canvas id="rssiChart1"></canvas>
-          </div>
-          <div class="rssi-chart-item" id="rssiBlock2">
-            <h4 class="p2">Pilot 3: <span class="rssi-val">0</span></h4>
-            <canvas id="rssiChart2"></canvas>
-          </div>
-          <div class="rssi-chart-item" id="rssiBlock3">
-            <h4 class="p3">Pilot 4: <span class="rssi-val">0</span></h4>
-            <canvas id="rssiChart3"></canvas>
-          </div>
-        </div>
-      </div>
+  <footer>
+    <p>PhobosLT 4ch &mdash; <a href="https://github.com/phobos-/PhobosLT" target="_blank">PhobosLT</a> (4ch mod)</p>
+  </footer>
 
-      <!-- OTA Update Tab -->
-      <div id="ota" class="tabcontent">
-        <div class="firmware-update">
-          <iframe src="http://20.0.0.1/update" width="100%" height="600px" frameborder="0"></iframe>
-        </div>
-      </div>
-    </main>
-
-    <footer>
-      <p>Powered by <a href="https://github.com/phobos-/PhobosLT" target="_blank" style="color: white">PhobosLT</a> (4ch mod)</p>
-    </footer>
-
-    <script src="script.js"></script>
-  </body>
+  <div id="toast" class="toast"></div>
+  <script src="script.js"></script>
+</body>
 </html>

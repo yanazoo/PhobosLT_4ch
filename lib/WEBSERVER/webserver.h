@@ -37,7 +37,7 @@ class Webserver {
     bool servicesStarted = false;
     bool wifiConnected = false;
 
-    bool sendRssi_flag = false;
+    bool sendRssi_flag = true;
     uint32_t rssiSentMs = 0;
     uint8_t currentRssi[NUM_PILOTS];
     uint8_t currentSlot = 0;

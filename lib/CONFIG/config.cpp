@@ -100,50 +100,39 @@ void Config::fromJson(JsonObject source, uint8_t pilot) {
     if (pilot >= NUM_PILOTS) return;
 
     pilot_config_t &p = conf.pilots[pilot];
+    bool changed = false;
 
-    if (source["freq"].is<uint16_t>() && source["freq"] != p.frequency) {
-        p.frequency = source["freq"];
-        modified = true;
+    if (!source["freq"].isNull()) {
+        p.frequency = source["freq"].as<uint16_t>();
+        changed = true;
     }
-    if (source["minLap"].is<uint16_t>() && source["minLap"] != p.minLap) {
-        p.minLap = source["minLap"];
-        modified = true;
+    if (!source["minLap"].isNull()) {
+        p.minLap = source["minLap"].as<uint8_t>();
+        changed = true;
     }
-    if (source["enterRssi"].is<uint8_t>() && source["enterRssi"] != p.enterRssi) {
-        p.enterRssi = source["enterRssi"];
-        modified = true;
+    if (!source["enterRssi"].isNull()) {
+        p.enterRssi = source["enterRssi"].as<uint8_t>();
+        changed = true;
     }
-    if (source["exitRssi"].is<uint8_t>() && source["exitRssi"] != p.exitRssi) {
-        p.exitRssi = source["exitRssi"];
-        modified = true;
+    if (!source["exitRssi"].isNull()) {
+        p.exitRssi = source["exitRssi"].as<uint8_t>();
+        changed = true;
     }
-    if (source["name"].is<const char*>() && source["name"] != p.pilotName) {
+    if (!source["name"].isNull()) {
         strlcpy(p.pilotName, source["name"] | "", sizeof(p.pilotName));
-        modified = true;
+        changed = true;
     }
+    if (changed) modified = true;
 }
 
 void Config::globalFromJson(JsonObject source) {
-    if (source["alarm"].is<uint8_t>() && source["alarm"] != conf.alarm) {
-        conf.alarm = source["alarm"];
-        modified = true;
-    }
-    if (source["anType"].is<uint8_t>() && source["anType"] != conf.announcerType) {
-        conf.announcerType = source["anType"];
-        modified = true;
-    }
-    if (source["anRate"].is<uint8_t>() && source["anRate"] != conf.announcerRate) {
-        conf.announcerRate = source["anRate"];
-        modified = true;
-    }
-    if (source["ssid"].is<const char*>() && source["ssid"] != conf.ssid) {
-        strlcpy(conf.ssid, source["ssid"] | "", sizeof(conf.ssid));
-        modified = true;
-    }
-    if (source["pwd"].is<const char*>() && source["pwd"] != conf.password) {
-        strlcpy(conf.password, source["pwd"] | "", sizeof(conf.password));
-        modified = true;
-    }
+    bool changed = false;
+    if (!source["alarm"].isNull())  { conf.alarm = source["alarm"].as<uint8_t>();          changed = true; }
+    if (!source["anType"].isNull()) { conf.announcerType = source["anType"].as<uint8_t>(); changed = true; }
+    if (!source["anRate"].isNull()) { conf.announcerRate = source["anRate"].as<uint8_t>(); changed = true; }
+    if (!source["ssid"].isNull())   { strlcpy(conf.ssid, source["ssid"] | "", sizeof(conf.ssid));         changed = true; }
+    if (!source["pwd"].isNull())    { strlcpy(conf.password, source["pwd"] | "", sizeof(conf.password));  changed = true; }
+    if (changed) modified = true;
 }
 
 uint16_t Config::getFrequency(uint8_t pilot) {
