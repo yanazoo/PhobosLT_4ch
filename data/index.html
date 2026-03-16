@@ -183,6 +183,16 @@
             </div>
           </div>
           <div class="config-row">
+            <label>最小ラップ時間（全パイロット共通）</label>
+            <div class="slider-num">
+              <input type="range" id="globalMinLap" min="1" max="60" step="0.5" value="10"
+                oninput="syncSN('globalMinLap','globalMinLapN',1)">
+              <input type="number" id="globalMinLapN" min="1" max="60" step="0.5" value="10"
+                oninput="syncNS('globalMinLapN','globalMinLap',1,60)">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="config-row">
             <label>バッテリー電圧</label>
             <span id="bvolt" class="value-display">--</span>
           </div>
@@ -218,16 +228,6 @@
                 <span id="freqDisplay0" class="freq-badge">---</span>
               </div>
             </div>
-            <div class="config-row">
-              <label>最小ラップ時間</label>
-              <div class="slider-num">
-                <input type="range" id="minLap0" min="1" max="25" step="0.5" value="10"
-                  oninput="syncSN('minLap0','minLapN0',1)">
-                <input type="number" id="minLapN0" min="1" max="25" step="0.5" value="10"
-                  oninput="syncNS('minLapN0','minLap0',1,25)">
-                <span class="unit">s</span>
-              </div>
-            </div>
           </div>
           <button onclick="savePilotConfig(0)" class="btn-save">💾 保存</button>
         </div>
@@ -252,16 +252,6 @@
                   <option>5</option><option>6</option><option>7</option><option>8</option>
                 </select>
                 <span id="freqDisplay1" class="freq-badge">---</span>
-              </div>
-            </div>
-            <div class="config-row">
-              <label>最小ラップ時間</label>
-              <div class="slider-num">
-                <input type="range" id="minLap1" min="1" max="25" step="0.5" value="10"
-                  oninput="syncSN('minLap1','minLapN1',1)">
-                <input type="number" id="minLapN1" min="1" max="25" step="0.5" value="10"
-                  oninput="syncNS('minLapN1','minLap1',1,25)">
-                <span class="unit">s</span>
               </div>
             </div>
           </div>
@@ -290,16 +280,6 @@
                 <span id="freqDisplay2" class="freq-badge">---</span>
               </div>
             </div>
-            <div class="config-row">
-              <label>最小ラップ時間</label>
-              <div class="slider-num">
-                <input type="range" id="minLap2" min="1" max="25" step="0.5" value="10"
-                  oninput="syncSN('minLap2','minLapN2',1)">
-                <input type="number" id="minLapN2" min="1" max="25" step="0.5" value="10"
-                  oninput="syncNS('minLapN2','minLap2',1,25)">
-                <span class="unit">s</span>
-              </div>
-            </div>
           </div>
           <button onclick="savePilotConfig(2)" class="btn-save">💾 保存</button>
         </div>
@@ -324,16 +304,6 @@
                   <option>5</option><option>6</option><option>7</option><option>8</option>
                 </select>
                 <span id="freqDisplay3" class="freq-badge">---</span>
-              </div>
-            </div>
-            <div class="config-row">
-              <label>最小ラップ時間</label>
-              <div class="slider-num">
-                <input type="range" id="minLap3" min="1" max="25" step="0.5" value="10"
-                  oninput="syncSN('minLap3','minLapN3',1)">
-                <input type="number" id="minLapN3" min="1" max="25" step="0.5" value="10"
-                  oninput="syncNS('minLapN3','minLap3',1,25)">
-                <span class="unit">s</span>
               </div>
             </div>
           </div>

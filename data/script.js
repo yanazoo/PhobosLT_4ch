@@ -139,14 +139,16 @@ window.addEventListener('load', function() {
         pilotConfigs.push({freq:5658, minLap:100, enterRssi:120, exitRssi:100, name:''});
       }
 
+      // Global minLap: read from pilot 0
+      var gml = (pilotConfigs[0] && pilotConfigs[0].minLap) ? pilotConfigs[0].minLap / 10 : 10;
+      el('globalMinLap').value  = gml;
+      el('globalMinLapN').value = gml.toFixed(1);
+
       for (var i = 0; i < NUM_PILOTS; i++) {
         var p = pilotConfigs[i];
 
         el('pname'+i).value = p.name || '';
         setBandChan(i, p.freq || 5658);
-        var ml = (p.minLap || 100) / 10;
-        el('minLap'+i).value  = ml;
-        el('minLapN'+i).value = ml.toFixed(1);
 
         el('enterRssi'+i).value  = p.enterRssi || 120;
         el('enterRssiN'+i).value = p.enterRssi || 120;
@@ -305,7 +307,8 @@ function savePilotConfig(pilot) {
   var c    = el('chanSelect'+pilot).selectedIndex;
   var freq = freqLookup[b][c];
   var name = el('pname'+pilot).value;
-  var ml   = Math.round(parseFloat(el('minLapN'+pilot).value) * 10);
+  // minLap is global — read from global setting
+  var ml   = Math.round(parseFloat(el('globalMinLapN').value) * 10);
 
   var cfg   = pilotConfigs[pilot] || {};
   var enter = cfg.enterRssi || 120;
@@ -355,16 +358,42 @@ function saveGlobalConfig() {
   var alarm  = Math.round(parseFloat(el('alarmN').value) * 10);
   var anType = el('announcerSelect').selectedIndex;
   var anRate = Math.round(parseFloat(el('rateN').value) * 10);
+  var ml     = Math.round(parseFloat(el('globalMinLapN').value) * 10);
   announcerRate = parseFloat(el('rateN').value);
 
+  // Save global settings (alarm, announcer)
   fetch('/config/global', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ alarm: alarm, anType: anType, anRate: anRate }),
-  })
-  .then(function(r) { return r.json(); })
-  .then(function() { showToast('グローバル設定を保存 ✓'); })
-  .catch(function() { showToast('保存に失敗しました ✗'); });
+  }).catch(function() {});
+
+  // Apply minLap to all pilots
+  var saved = 0;
+  for (var i = 0; i < NUM_PILOTS; i++) {
+    var cfg   = pilotConfigs[i] || {};
+    var data  = {
+      freq:      cfg.freq      || 5658,
+      minLap:    ml,
+      enterRssi: cfg.enterRssi || 120,
+      exitRssi:  cfg.exitRssi  || 100,
+      name:      cfg.name      || ('Pilot '+(i+1)),
+    };
+    pilotConfigs[i] = Object.assign(cfg, { minLap: ml });
+    (function(idx) {
+      fetch('/config/pilot?p='+idx, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        saved++;
+        if (saved === NUM_PILOTS) showToast('グローバル設定を保存 ✓');
+      })
+      .catch(function() { showToast('保存に失敗しました ✗'); });
+    })(i);
+  }
 }
 
 // ── Race management ────────────────────────────────────────────────────────
