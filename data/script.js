@@ -24,7 +24,7 @@ var lapNos        = [-1,-1,-1,-1];
 var lapTimesArr   = [[],[],[],[]];
 var timerInterval = null;
 var raceStartTime = null;  // Date.now() at race start for accurate timer
-var audioEnabled  = false;
+var audioEnabled  = true;   // default ON
 var announcerRate = 1.0;
 var totalLaps     = 0;
 var currentTab    = 'race';
@@ -281,6 +281,23 @@ setInterval(function() {
     updateChartLines(i);
   }
 }, 200);
+
+// ── Battery voltage display ────────────────────────────────────────────────
+function updateBatteryDisplay(voltStr) {
+  var bv1 = el('bvolt');     if (bv1) bv1.textContent = voltStr;
+  var bv2 = el('bvoltRace'); if (bv2) bv2.textContent = voltStr;
+}
+
+// Poll /status every 5 seconds for battery voltage (works with all firmware versions)
+setInterval(function() {
+  fetch('/status')
+    .then(function(r) { return r.text(); })
+    .then(function(t) {
+      var m = t.match(/Battery Voltage:\s*([\d.]+)v/i);
+      if (m) updateBatteryDisplay(m[1] + 'v');
+    })
+    .catch(function() {});
+}, 5000);
 
 // ── Save functions ─────────────────────────────────────────────────────────
 function savePilotConfig(pilot) {
@@ -594,11 +611,9 @@ function beep(duration, freq) {
           rssiValues[i] = d.r[i];
         }
       }
-      // Battery voltage from SSE (v = raw * 10, so divide by 10 for volts)
-      if (typeof d.v === 'number' && d.v > 0) {
-        var vStr = (d.v / 10).toFixed(1) + 'v';
-        var bv1 = el('bvolt');     if (bv1) bv1.textContent = vStr;
-        var bv2 = el('bvoltRace'); if (bv2) bv2.textContent = vStr;
+      // Battery voltage from SSE (v = raw value where raw/10 = volts)
+      if (typeof d.v === 'number') {
+        updateBatteryDisplay((d.v / 10).toFixed(1) + 'v');
       }
     } catch(err) {}
   });
