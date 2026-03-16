@@ -1,6 +1,4 @@
 #include "webserver.h"
-#include <ElegantOTA.h>
-
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
@@ -62,11 +60,12 @@ void Webserver::setCurrentSlot(uint8_t slot) {
 
 void Webserver::sendRssiEvent() {
     if (!servicesStarted) return;
-    // Send all 4 pilot RSSI values in one event
-    char buf[128];
-    snprintf(buf, sizeof(buf), "{\"r\":[%u,%u,%u,%u],\"s\":%u}",
+    // Send all 4 pilot RSSI values + battery voltage in one event
+    char buf[160];
+    uint8_t batV = monitor->getBatteryVoltage();  // value * 10 = voltage * 10
+    snprintf(buf, sizeof(buf), "{\"r\":[%u,%u,%u,%u],\"s\":%u,\"v\":%u}",
              currentRssi[0], currentRssi[1], currentRssi[2], currentRssi[3],
-             currentSlot);
+             currentSlot, batV);
     events.send(buf, "rssi");
 }
 
@@ -417,9 +416,6 @@ void Webserver::startServices() {
     server.addHandler(&events);
     server.addHandler(pilotConfigHandler);
     server.addHandler(globalConfigHandler);
-
-    ElegantOTA.setAutoReboot(true);
-    ElegantOTA.begin(&server);
 
     server.begin();
 

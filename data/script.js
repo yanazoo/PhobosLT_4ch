@@ -23,6 +23,7 @@ var rssiValues    = [0, 0, 0, 0];
 var lapNos        = [-1,-1,-1,-1];
 var lapTimesArr   = [[],[],[],[]];
 var timerInterval = null;
+var raceStartTime = null;  // Date.now() at race start for accurate timer
 var audioEnabled  = false;
 var announcerRate = 1.0;
 var totalLaps     = 0;
@@ -39,23 +40,18 @@ var chartsReady = false;
 function switchTab(name) {
   currentTab = name;
 
-  // Show / hide panes
   document.querySelectorAll('.tab-pane').forEach(function(s) {
     s.style.display = 'none';
   });
   var pane = el(name);
   if (pane) pane.style.display = 'block';
 
-  // Update button states
   document.querySelectorAll('.tab-btn').forEach(function(b) {
     b.classList.toggle('active', b.dataset.tab === name);
   });
 
   if (name === 'calib') {
     if (!chartsReady) {
-      // ★ Key fix: wait 150ms after display:block so browser can compute layout.
-      //   requestAnimationFrame fires before layout is complete in many browsers.
-      //   setTimeout(150) is reliable on both desktop and iOS Safari.
       setTimeout(function() {
         chartsReady = true;
         for (var i = 0; i < NUM_PILOTS; i++) {
@@ -64,11 +60,9 @@ function switchTab(name) {
         }
       }, 150);
     } else {
-      // Charts already created — just restart animation loop
       rssiCharts.forEach(function(c) { if (c) c.start(); });
     }
   } else {
-    // Stop animation when not on calib tab (saves CPU/battery)
     rssiCharts.forEach(function(c) { if (c) c.stop(); });
   }
 }
@@ -85,13 +79,11 @@ function showToast(msg, ms) {
 
 function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
-// Slider → Number
 function syncSN(sId, nId, dec) {
   var s = el(sId), n = el(nId);
   if (s && n) n.value = parseFloat(s.value).toFixed(dec);
 }
 
-// Number → Slider (with clamp)
 function syncNS(nId, sId, dec, maxV) {
   var n = el(nId), s = el(sId);
   if (!n || !s) return;
@@ -150,26 +142,22 @@ window.addEventListener('load', function() {
       for (var i = 0; i < NUM_PILOTS; i++) {
         var p = pilotConfigs[i];
 
-        // Config section
         el('pname'+i).value = p.name || '';
         setBandChan(i, p.freq || 5658);
         var ml = (p.minLap || 100) / 10;
         el('minLap'+i).value  = ml;
         el('minLapN'+i).value = ml.toFixed(1);
 
-        // Calibration section
         el('enterRssi'+i).value  = p.enterRssi || 120;
         el('enterRssiN'+i).value = p.enterRssi || 120;
         el('exitRssi'+i).value   = p.exitRssi  || 100;
         el('exitRssiN'+i).value  = p.exitRssi  || 100;
 
-        // Headers
         updateRaceCard(i);
         var cn = el('calibName'+i);
         if (cn) cn.textContent = p.name || ('Pilot '+(i+1));
       }
 
-      // Global
       var alarm = (cfg.alarm || 36) / 10;
       el('alarmThreshold').value = alarm;
       el('alarmN').value         = alarm.toFixed(1);
@@ -234,26 +222,20 @@ function createRssiChart(pilot) {
   var canvas = el('rssiChart' + pilot);
   if (!canvas) { console.error('[Chart] canvas not found: pilot', pilot); return; }
 
-  // At this point the section is display:block and layout is computed.
-  // canvas.offsetWidth/offsetHeight reflect the CSS-computed size.
   var w = canvas.offsetWidth;
   var h = canvas.offsetHeight;
-
   if (w === 0 || h === 0) {
-    // Fallback: read from parent container
     var parent = canvas.parentElement;
     w = parent ? parent.clientWidth  : 300;
     h = parent ? parent.clientHeight : 130;
-    if (h < 50) h = 130; // minimum sensible height
+    if (h < 50) h = 130;
   }
 
-  // Set canvas BUFFER to match CSS display size (prevents blurry rendering)
   canvas.width  = w;
   canvas.height = h;
-  console.log('[Chart] pilot', pilot, 'canvas:', w, 'x', h);
 
   var chart = new SmoothieChart({
-    responsive:      true,   // keeps canvas in sync with CSS on window resize
+    responsive:      true,
     millisPerPixel:  50,
     grid: {
       strokeStyle:      'rgba(255,255,255,0.12)',
@@ -274,36 +256,28 @@ function createRssiChart(pilot) {
     fillStyle:   PILOT_FILL_COLORS[pilot],
   });
 
-  // Seed two data points so the chart shows a line immediately
-  // (without seed, SmoothieChart needs to wait for data to scroll in)
   var now = Date.now();
   rssiSeries[pilot].append(now - 12000, rssiValues[pilot]);
   rssiSeries[pilot].append(now,          rssiValues[pilot]);
 
-  // streamTo() sets canvas reference + starts animation loop
   chart.streamTo(canvas, 250);
   rssiCharts[pilot] = chart;
 }
 
-// ── RSSI display update (runs always, 200ms) ───────────────────────────────
+// ── RSSI display update (200ms) ────────────────────────────────────────────
 setInterval(function() {
   var now = Date.now();
   for (var i = 0; i < NUM_PILOTS; i++) {
     var v = rssiValues[i];
 
-    // Mini bar in race cards (always update)
     var bar = el('rssiBar'+i), num = el('rssiNum'+i);
     if (bar) bar.style.width = Math.min(100, v / 255 * 100) + '%';
     if (num) num.textContent = v;
 
-    // Calibration live value (always update even if tab hidden)
     var cv = el('calibRssi'+i);
     if (cv) cv.textContent = v;
 
-    // Append to time series (always — so chart shows recent history when tab opens)
     rssiSeries[i].append(now, v);
-
-    // Update threshold lines (only if chart exists)
     updateChartLines(i);
   }
 }, 200);
@@ -316,7 +290,6 @@ function savePilotConfig(pilot) {
   var name = el('pname'+pilot).value;
   var ml   = Math.round(parseFloat(el('minLapN'+pilot).value) * 10);
 
-  // Preserve calibration thresholds
   var cfg   = pilotConfigs[pilot] || {};
   var enter = cfg.enterRssi || 120;
   var exit_ = cfg.exitRssi  || 100;
@@ -377,27 +350,19 @@ function saveGlobalConfig() {
   .catch(function() { showToast('保存に失敗しました ✗'); });
 }
 
-// ── Battery voltage ────────────────────────────────────────────────────────
-setInterval(function() {
-  fetch('/status')
-    .then(function(r) { return r.text(); })
-    .then(function(t) {
-      var m = t.match(/Battery Voltage:\s*([\d.]+)v/);
-      el('bvolt').textContent = m ? m[1]+'v' : '--';
-    })
-    .catch(function() {});
-}, 4000);
-
 // ── Race management ────────────────────────────────────────────────────────
 function startTimer() {
-  var ms = 0, s = 0, m = 0;
+  // Use real clock time for smooth, drift-free timer display
+  raceStartTime = Date.now();
   timerInterval = setInterval(function() {
-    ms++;
-    if (ms >= 100) { ms = 0; s++; }
-    if (s  >= 60)  { s  = 0; m++; }
+    var elapsed = Date.now() - raceStartTime;
+    var ms = Math.floor((elapsed % 1000) / 10); // centiseconds
+    var s  = Math.floor(elapsed / 1000) % 60;
+    var m  = Math.floor(elapsed / 60000);
     el('timer').textContent = pad(m)+':'+pad(s)+':'+pad(ms);
-  }, 10);
+  }, 50);
 }
+
 function pad(n) { return n < 10 ? '0'+n : ''+n; }
 
 async function startRace() {
@@ -405,10 +370,8 @@ async function startRace() {
   clearAllLaps();
   totalLaps = parseInt(el('totalLaps').value) || 0;
 
-  // Tell ESP32 to start countdown buzzer + start timers after 3s
   fetch('/timer/countdown', { method: 'POST' }).catch(function() {});
 
-  // Browser visual + audio countdown
   var overlay = el('countdownOverlay');
   var numEl   = el('countdownNum');
   overlay.style.display = 'flex';
@@ -422,13 +385,11 @@ async function startRace() {
 
   for (var i = 0; i < steps.length; i++) {
     var s = steps[i];
-    // Re-trigger animation by cloning the element
     numEl.textContent = s.label;
     numEl.style.animation = 'none';
-    void numEl.offsetWidth; // reflow
+    void numEl.offsetWidth;
     numEl.style.animation = '';
     beep(s.dur, s.freq);
-    // Speak without requiring audioEnabled (countdown always spoken)
     if (window.speechSynthesis) {
       var u = new SpeechSynthesisUtterance(s.speak);
       u.lang = 'ja-JP'; u.rate = 1.3; u.volume = 1;
@@ -460,6 +421,8 @@ function clearAllLaps() {
     lapTimesArr[i] = [];
     var badge = document.querySelector('#raceCard'+i+' .pilot-lapcount');
     if (badge) badge.textContent = '';
+    var ptEl = el('pilotTotal'+i);
+    if (ptEl) ptEl.textContent = '--';
   }
 }
 
@@ -470,29 +433,38 @@ function addLap(pilotIdx, lapMs) {
   var laps   = lapTimesArr[pilotIdx];
   var name   = (pilotConfigs[pilotIdx] && pilotConfigs[pilotIdx].name) || ('Pilot '+(pilotIdx+1));
 
+  // Keep s2/s3 for announcer (internal only, not displayed in table)
+  var s2 = '', s3 = '';
+  if (laps.length >= 1 && lapNo > 0) {
+    s2 = (lapSec + laps[laps.length-1]).toFixed(2);
+  }
+  if (laps.length >= 2 && lapNo > 0) {
+    s3 = (lapSec + laps[laps.length-1] + laps[laps.length-2]).toFixed(2);
+  }
+
+  laps.push(lapSec);
+
+  // Cumulative total
+  var totalSec = laps.reduce(function(a, b) { return a + b; }, 0);
+  var totalStr = totalSec.toFixed(2);
+
   var tb = document.querySelector('#lapTable'+pilotIdx+' tbody');
   if (!tb) return;
 
-  var row = tb.insertRow(0); // newest at top
+  var row = tb.insertRow(0);
   if (lapNo === 0) row.className = 'hs-row';
 
   row.insertCell(0).textContent = lapNo;
 
   var tc = row.insertCell(1);
+  tc.className = 'lap-time';
   tc.textContent = lapNo === 0 ? 'HS: '+lapStr+'s' : lapStr+'s';
 
-  var c2 = row.insertCell(2);
-  var c3 = row.insertCell(3);
-  var s2 = '', s3 = '';
+  row.insertCell(2).textContent = totalStr+'s';
 
-  if (laps.length >= 1 && lapNo > 0) {
-    s2 = (lapSec + laps[laps.length-1]).toFixed(2);
-    c2.textContent = s2+'s';
-  }
-  if (laps.length >= 2 && lapNo > 0) {
-    s3 = (lapSec + laps[laps.length-1] + laps[laps.length-2]).toFixed(2);
-    c3.textContent = s3+'s';
-  }
+  // Update pilot total display card
+  var ptEl = el('pilotTotal'+pilotIdx);
+  if (ptEl) ptEl.textContent = totalStr+'s';
 
   // Lap count badge
   var badge = document.querySelector('#raceCard'+pilotIdx+' .pilot-lapcount');
@@ -505,8 +477,6 @@ function addLap(pilotIdx, lapMs) {
   } else {
     announceType(lapNo, lapStr, s2, s3, name, pilotIdx);
   }
-
-  laps.push(lapSec);
 }
 
 function announceType(lapNo, lapStr, s2, s3, name, pilotIdx) {
@@ -537,7 +507,6 @@ function toggleVoice() {
   if (audioEnabled) {
     btn.textContent = '🔊 音声 ON';
     btn.classList.add('on');
-    // iOS requires user gesture to unlock speechSynthesis
     if (window.speechSynthesis) {
       var u = new SpeechSynthesisUtterance('音声を有効にしました');
       u.lang = 'ja-JP'; u.volume = 0.5; u.rate = announcerRate;
@@ -624,6 +593,12 @@ function beep(duration, freq) {
         for (var i = 0; i < NUM_PILOTS && i < d.r.length; i++) {
           rssiValues[i] = d.r[i];
         }
+      }
+      // Battery voltage from SSE (v = raw * 10, so divide by 10 for volts)
+      if (typeof d.v === 'number' && d.v > 0) {
+        var vStr = (d.v / 10).toFixed(1) + 'v';
+        var bv1 = el('bvolt');     if (bv1) bv1.textContent = vStr;
+        var bv2 = el('bvoltRace'); if (bv2) bv2.textContent = vStr;
       }
     } catch(err) {}
   });

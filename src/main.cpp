@@ -5,7 +5,6 @@
 #include "config.h"
 #include "led.h"
 #include "webserver.h"
-#include <ElegantOTA.h>
 
 // Adaptive scanner for 4 pilots using 1 RX5808
 // TDM mode when all pilots idle: round-robin at ~125Hz/pilot
@@ -85,7 +84,6 @@ void loop() {
         uint16_t freq = config.getFrequency(slot);
         if (freq == 0 || freq == POWER_DOWN_FREQ_MHZ) {
             ws.setRssi(slot, 0);
-            ElegantOTA.loop();
             return;
         }
 
@@ -98,7 +96,6 @@ void loop() {
     uint16_t freq = config.getFrequency(slot);
     if (freq == 0 || freq == POWER_DOWN_FREQ_MHZ) {
         prioritySlot = NUM_PILOTS;
-        ElegantOTA.loop();
         return;
     }
 
@@ -125,6 +122,4 @@ void loop() {
     } else if (prioritySlot == slot && rssi < config.getExitRssi(slot)) {
         prioritySlot = NUM_PILOTS;
     }
-
-    ElegantOTA.loop();
 }

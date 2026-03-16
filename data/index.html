@@ -6,7 +6,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>PhobosLT 4ch</title>
-  <link rel="icon" type="image/png" href="favicon.ico">
   <link rel="stylesheet" href="style.css">
   <script src="jquery-3.7.1.min.js"></script>
   <script src="smoothie.js"></script>
@@ -15,7 +14,6 @@
   <header>
     <div class="header-inner">
       <div class="logo">
-        <img src="favicon.ico" alt="PLT" width="32">
         <h1>PhobosLT 4ch</h1>
         <span id="sseStatus" class="sse-dot disconnected" title="SSE接続状態"></span>
       </div>
@@ -23,7 +21,6 @@
         <button class="tab-btn active" data-tab="race"   onclick="switchTab('race')">🏁 レース</button>
         <button class="tab-btn"        data-tab="config" onclick="switchTab('config')">⚙️ 設定</button>
         <button class="tab-btn"        data-tab="calib"  onclick="switchTab('calib')">📡 キャリブ</button>
-        <button class="tab-btn"        data-tab="ota"    onclick="switchTab('ota')">🔄 更新</button>
       </nav>
     </div>
   </header>
@@ -43,10 +40,14 @@
           <label for="totalLaps">総周回数:</label>
           <input type="number" id="totalLaps" min="0" max="99" value="0">
           <span class="hint">（0=無制限）</span>
+          <span class="bat-sep">｜</span>
+          <span class="bat-label">🔋</span>
+          <span id="bvoltRace" class="value-display">--</span>
         </div>
       </div>
 
       <div class="pilot-race-grid">
+        <!-- Pilot 0 -->
         <div class="pilot-race-card" id="raceCard0">
           <div class="pilot-card-header p0">
             <span class="pilot-name">Pilot 1</span>
@@ -58,14 +59,19 @@
             <div class="rssi-mini-track"><div class="rssi-mini-fill p0-fill" id="rssiBar0"></div></div>
             <span class="rssi-mini-val" id="rssiNum0">0</span>
           </div>
+          <div class="pilot-total-row">
+            <span class="total-label">合計</span>
+            <span class="pilot-total" id="pilotTotal0">--</span>
+          </div>
           <div class="lap-table-wrap">
             <table class="lapTable" id="lapTable0">
-              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <thead><tr><th>周</th><th>タイム</th><th>累計</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
 
+        <!-- Pilot 1 -->
         <div class="pilot-race-card" id="raceCard1">
           <div class="pilot-card-header p1">
             <span class="pilot-name">Pilot 2</span>
@@ -77,14 +83,19 @@
             <div class="rssi-mini-track"><div class="rssi-mini-fill p1-fill" id="rssiBar1"></div></div>
             <span class="rssi-mini-val" id="rssiNum1">0</span>
           </div>
+          <div class="pilot-total-row">
+            <span class="total-label">合計</span>
+            <span class="pilot-total" id="pilotTotal1">--</span>
+          </div>
           <div class="lap-table-wrap">
             <table class="lapTable" id="lapTable1">
-              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <thead><tr><th>周</th><th>タイム</th><th>累計</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
 
+        <!-- Pilot 2 -->
         <div class="pilot-race-card" id="raceCard2">
           <div class="pilot-card-header p2">
             <span class="pilot-name">Pilot 3</span>
@@ -96,14 +107,19 @@
             <div class="rssi-mini-track"><div class="rssi-mini-fill p2-fill" id="rssiBar2"></div></div>
             <span class="rssi-mini-val" id="rssiNum2">0</span>
           </div>
+          <div class="pilot-total-row">
+            <span class="total-label">合計</span>
+            <span class="pilot-total" id="pilotTotal2">--</span>
+          </div>
           <div class="lap-table-wrap">
             <table class="lapTable" id="lapTable2">
-              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <thead><tr><th>周</th><th>タイム</th><th>累計</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
 
+        <!-- Pilot 3 -->
         <div class="pilot-race-card" id="raceCard3">
           <div class="pilot-card-header p3">
             <span class="pilot-name">Pilot 4</span>
@@ -115,9 +131,13 @@
             <div class="rssi-mini-track"><div class="rssi-mini-fill p3-fill" id="rssiBar3"></div></div>
             <span class="rssi-mini-val" id="rssiNum3">0</span>
           </div>
+          <div class="pilot-total-row">
+            <span class="total-label">合計</span>
+            <span class="pilot-total" id="pilotTotal3">--</span>
+          </div>
           <div class="lap-table-wrap">
             <table class="lapTable" id="lapTable3">
-              <thead><tr><th>周</th><th>タイム</th><th>2周計</th><th>3周計</th></tr></thead>
+              <thead><tr><th>周</th><th>タイム</th><th>累計</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -129,6 +149,52 @@
     <section id="config" class="section tab-pane" style="display:none">
       <h2 class="section-title">設定</h2>
 
+      <!-- Global Settings FIRST -->
+      <div class="global-config-card">
+        <h3 class="global-title">グローバル設定</h3>
+        <div class="config-items">
+          <div class="config-row">
+            <label>低電圧アラーム</label>
+            <div class="slider-num">
+              <input type="range" id="alarmThreshold" min="0" max="4.2" step="0.1" value="3.6"
+                oninput="syncSN('alarmThreshold','alarmN',1)">
+              <input type="number" id="alarmN" min="0" max="4.2" step="0.1" value="3.6"
+                oninput="syncNS('alarmN','alarmThreshold',1,4.2)">
+              <span class="unit">v</span>
+            </div>
+          </div>
+          <div class="config-row">
+            <label>アナウンス種別</label>
+            <select id="announcerSelect">
+              <option value="none">なし</option>
+              <option value="beep">ビープ音</option>
+              <option value="1lap">ラップタイム読み上げ</option>
+              <option value="2lap">2ラップ合計読み上げ</option>
+              <option value="3lap">3ラップ合計読み上げ</option>
+            </select>
+          </div>
+          <div class="config-row">
+            <label>読み上げ速度</label>
+            <div class="slider-num">
+              <input type="range" id="rate" min="0.5" max="2.0" step="0.1" value="1.0"
+                oninput="syncSN('rate','rateN',1)">
+              <input type="number" id="rateN" min="0.5" max="2.0" step="0.1" value="1.0"
+                oninput="syncNS('rateN','rate',1,2.0)">
+            </div>
+          </div>
+          <div class="config-row">
+            <label>バッテリー電圧</label>
+            <span id="bvolt" class="value-display">--</span>
+          </div>
+        </div>
+        <div class="voice-row">
+          <button id="voiceToggleBtn" onclick="toggleVoice()" class="btn-voice">🔇 音声 OFF</button>
+          <button onclick="testVoice()" class="btn-secondary">🔊 テスト</button>
+        </div>
+        <button onclick="saveGlobalConfig()" class="btn-save">💾 グローバル設定を保存</button>
+      </div>
+
+      <!-- Pilot Settings -->
       <div class="config-pilots-grid">
         <!-- Pilot 0 -->
         <div class="config-pilot-card p0-border">
@@ -274,51 +340,6 @@
           <button onclick="savePilotConfig(3)" class="btn-save">💾 保存</button>
         </div>
       </div>
-
-      <!-- Global Settings -->
-      <div class="global-config-card">
-        <h3 class="global-title">グローバル設定</h3>
-        <div class="config-items">
-          <div class="config-row">
-            <label>低電圧アラーム</label>
-            <div class="slider-num">
-              <input type="range" id="alarmThreshold" min="0" max="4.2" step="0.1" value="3.6"
-                oninput="syncSN('alarmThreshold','alarmN',1)">
-              <input type="number" id="alarmN" min="0" max="4.2" step="0.1" value="3.6"
-                oninput="syncNS('alarmN','alarmThreshold',1,4.2)">
-              <span class="unit">v</span>
-            </div>
-          </div>
-          <div class="config-row">
-            <label>アナウンス種別</label>
-            <select id="announcerSelect">
-              <option value="none">なし</option>
-              <option value="beep">ビープ音</option>
-              <option value="1lap">ラップタイム読み上げ</option>
-              <option value="2lap">2ラップ合計読み上げ</option>
-              <option value="3lap">3ラップ合計読み上げ</option>
-            </select>
-          </div>
-          <div class="config-row">
-            <label>読み上げ速度</label>
-            <div class="slider-num">
-              <input type="range" id="rate" min="0.5" max="2.0" step="0.1" value="1.0"
-                oninput="syncSN('rate','rateN',1)">
-              <input type="number" id="rateN" min="0.5" max="2.0" step="0.1" value="1.0"
-                oninput="syncNS('rateN','rate',1,2.0)">
-            </div>
-          </div>
-          <div class="config-row">
-            <label>バッテリー電圧</label>
-            <span id="bvolt" class="value-display">--</span>
-          </div>
-        </div>
-        <div class="voice-row">
-          <button id="voiceToggleBtn" onclick="toggleVoice()" class="btn-voice">🔇 音声 OFF</button>
-          <button onclick="testVoice()" class="btn-secondary">🔊 テスト</button>
-        </div>
-        <button onclick="saveGlobalConfig()" class="btn-save">💾 グローバル設定を保存</button>
-      </div>
     </section>
 
     <!-- ===== CALIBRATION ===== -->
@@ -448,18 +469,10 @@
         </div>
       </div>
     </section>
-
-    <!-- ===== OTA ===== -->
-    <section id="ota" class="section tab-pane" style="display:none">
-      <h2 class="section-title">ファームウェア更新</h2>
-      <div class="ota-wrap">
-        <iframe src="/update" width="100%" height="520" frameborder="0"></iframe>
-      </div>
-    </section>
   </main>
 
   <footer>
-    <p>PhobosLT 4ch &mdash; <a href="https://github.com/phobos-/PhobosLT" target="_blank">PhobosLT</a> (4ch mod)</p>
+    <p>PhobosLT 4ch</p>
   </footer>
 
   <div id="toast" class="toast"></div>

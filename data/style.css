@@ -47,7 +47,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 .logo {
@@ -90,7 +90,7 @@ header {
 /* ========== Main ========== */
 main {
   flex: 1;
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   padding: 16px 12px 32px;
@@ -146,7 +146,7 @@ main {
 /* ========== Pilot Race Grid ========== */
 .pilot-race-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 .pilot-race-card {
@@ -192,13 +192,27 @@ main {
 .p3-fill { background: var(--p3); }
 .rssi-mini-val { font-size: 10px; color: var(--muted); min-width: 22px; text-align: right; }
 
+/* Pilot Total Row */
+.pilot-total-row {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 8px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+}
+.total-label { font-size: 9px; color: var(--muted); width: 26px; }
+.pilot-total { font-size: 14px; font-weight: 700; color: var(--accent); }
+
+/* Bat display in lap-count-row */
+.bat-sep  { color: var(--muted); margin: 0 4px; }
+.bat-label { font-size: 13px; }
+
 /* Lap Table */
 .lap-table-wrap { overflow-x: auto; max-height: 220px; overflow-y: auto; }
 .lapTable { width: 100%; border-collapse: collapse; font-size: 11px; }
 .lapTable thead th {
   background: var(--surface2);
   color: var(--muted);
-  padding: 3px 5px;
+  padding: 3px 4px;
   text-align: center;
   font-weight: normal;
   font-size: 10px;
@@ -206,13 +220,19 @@ main {
   position: sticky; top: 0;
 }
 .lapTable tbody td {
-  padding: 3px 5px;
+  padding: 3px 4px;
   text-align: center;
   border-bottom: 1px solid var(--border);
   color: var(--text);
 }
+.lapTable tbody td.lap-time {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
 .lapTable tbody tr:hover { background: var(--surface2); }
 .lapTable tbody tr.hs-row td { color: var(--warn); font-style: italic; }
+.lapTable tbody tr.hs-row td.lap-time { color: var(--warn); }
 
 /* ========== Buttons ========== */
 button {
@@ -318,7 +338,7 @@ button:not(:disabled):hover { filter: brightness(1.15); }
 
 /* ========== Calibration ========== */
 .calib-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 .calib-card {
@@ -349,9 +369,6 @@ button:not(:disabled):hover { filter: brightness(1.15); }
 .calib-sliders { padding: 8px 12px; display: flex; flex-direction: column; gap: 8px; }
 .calib-card .btn-save { margin: 0 12px 10px; width: calc(100% - 24px); }
 
-/* ========== OTA ========== */
-.ota-wrap iframe { border-radius: 8px; background: white; }
-
 /* ========== Footer ========== */
 footer {
   background: var(--surface);
@@ -380,15 +397,24 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ========== Global config spacing ========== */
+.global-config-card { margin-bottom: 12px; }
+
+/* ========== Tablet ========== */
+@media (max-width: 860px) {
+  .pilot-race-grid { grid-template-columns: 1fr 1fr; }
+  .calib-grid      { grid-template-columns: 1fr 1fr; }
+}
+
 /* ========== Mobile ========== */
-@media (max-width: 620px) {
+@media (max-width: 520px) {
   .header-inner { flex-direction: column; gap: 6px; align-items: flex-start; }
-  .nav-links a   { padding: 5px 8px; font-size: 12px; }
   .pilot-race-grid    { grid-template-columns: 1fr; }
   .config-pilots-grid { grid-template-columns: 1fr; }
   .calib-grid         { grid-template-columns: 1fr; }
   #timer { font-size: 32px; }
   .race-buttons { gap: 6px; }
+  .lapTable tbody td.lap-time { font-size: 13px; }
 }
 
 
