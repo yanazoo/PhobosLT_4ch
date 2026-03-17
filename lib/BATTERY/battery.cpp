@@ -31,6 +31,7 @@ uint8_t BatteryMonitor::getBatteryVoltage() {
     measurementIndex = (measurementIndex + 1) % AVERAGING_SIZE;
     uint8_t scaled = map(round(averageSum / AVERAGING_SIZE), 0, 4095, 0, 33 * scale) + add;
     DEBUG("Battery raw:%u, scaled:%u\n", raw, scaled);
+    lastVoltage = scaled;  // cache so alarm and display always compare the same sample
     return scaled;
 }
 
@@ -39,7 +40,7 @@ void BatteryMonitor::checkBatteryState(uint32_t currentTimeMs, uint8_t alarmThre
         case ALARM_OFF:
             if ((alarmThreshold > 0) && ((currentTimeMs - lastCheckTimeMs) > MONITOR_CHECK_TIME_MS)) {
                 lastCheckTimeMs = currentTimeMs;
-                if (getBatteryVoltage() <= alarmThreshold) {
+                if (lastVoltage > 0 && lastVoltage <= alarmThreshold) {
                     state = ALARM_BEEPING;
                     buz->beep(MONITOR_BEEP_TIME_MS);
                     led->blink(MONITOR_BEEP_TIME_MS);
@@ -55,7 +56,7 @@ void BatteryMonitor::checkBatteryState(uint32_t currentTimeMs, uint8_t alarmThre
         case ALARM_IDLE:
             if ((currentTimeMs - lastCheckTimeMs) > MONITOR_BEEP_TIME_MS) {
                 lastCheckTimeMs = currentTimeMs;
-                if (getBatteryVoltage() <= alarmThreshold + 1) {
+                if (lastVoltage > 0 && lastVoltage <= alarmThreshold + 1) {
                     state = ALARM_BEEPING;
                     buz->beep(MONITOR_BEEP_TIME_MS);
                 } else {

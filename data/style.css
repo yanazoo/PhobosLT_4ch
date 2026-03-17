@@ -125,6 +125,8 @@ main {
   font-family: "Courier New", monospace;
   color: var(--accent);
   letter-spacing: 3px;
+  contain: layout style;  /* isolate timer from DOM thrash outside this element */
+  will-change: contents;  /* hint browser to keep this on its own compositing layer */
 }
 .race-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .lap-count-row {
@@ -226,7 +228,7 @@ main {
   color: var(--text);
 }
 .lapTable tbody td.lap-time {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
@@ -283,6 +285,24 @@ button:not(:disabled):hover { filter: brightness(1.15); }
 .config-row label {
   font-size: 10px; color: var(--muted);
   font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+}
+/* Horizontal label|input layout for all config sections */
+.config-items .config-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.config-items .config-row > label {
+  width: 155px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.config-items .config-row > .slider-num,
+.config-items .config-row > select,
+.config-items .config-row > .value-display,
+.config-items .config-row > .band-ch-row {
+  flex: 1;
+  min-width: 0;
 }
 .config-row input[type="text"],
 .config-row select {
@@ -400,21 +420,14 @@ footer a { color: var(--accent); text-decoration: none; }
 /* ========== Global config spacing ========== */
 .global-config-card { margin-bottom: 12px; }
 
-/* ========== Tablet ========== */
-@media (max-width: 860px) {
-  .pilot-race-grid { grid-template-columns: 1fr 1fr; }
-  .calib-grid      { grid-template-columns: 1fr 1fr; }
-}
-
 /* ========== Mobile ========== */
 @media (max-width: 520px) {
   .header-inner { flex-direction: column; gap: 6px; align-items: flex-start; }
-  .pilot-race-grid    { grid-template-columns: 1fr; }
+  .pilot-race-grid    { grid-template-columns: 1fr 1fr; }
   .config-pilots-grid { grid-template-columns: 1fr; }
-  .calib-grid         { grid-template-columns: 1fr; }
+  .calib-grid         { grid-template-columns: 1fr 1fr; }
   #timer { font-size: 32px; }
   .race-buttons { gap: 6px; }
-  .lapTable tbody td.lap-time { font-size: 13px; }
 }
 
 
@@ -440,3 +453,14 @@ footer a { color: var(--accent); text-decoration: none; }
   40%  { transform: scale(1.0); opacity: 1; }
   100% { transform: scale(0.95); opacity: 1; }
 }
+
+/* ========== Battery Low Alert ========== */
+@keyframes batBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+.bat-low {
+  color: var(--err) !important;
+  animation: batBlink 0.8s step-start infinite;
+}
+.bat-icon { font-size: 14px; margin-right: 2px; }

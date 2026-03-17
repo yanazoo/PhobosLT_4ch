@@ -22,7 +22,7 @@ var pilotConfigs  = [];
 var rssiValues    = [0, 0, 0, 0];
 var lapNos        = [-1,-1,-1,-1];
 var lapTimesArr   = [[],[],[],[]];
-var timerInterval = null;
+var timerRAF      = null;   // requestAnimationFrame handle for race timer
 var raceStartTime = null;  // Date.now() at race start for accurate timer
 var audioEnabled  = true;   // default ON
 var announcerRate = 1.0;
@@ -30,6 +30,8 @@ var totalLaps     = 0;
 var currentTab    = 'race';
 var speechQueue   = [];
 var isSpeaking    = false;
+var minLapSec     = 10;   // global minimum lap time (seconds), updated from UI
+var lastBatUpdateMs = 0; // throttle battery display to 1/sec (suppress SSE DOM thrash)
 
 // RSSI charts — series created immediately, charts created lazily when calib tab opens
 var rssiSeries  = [new TimeSeries(), new TimeSeries(), new TimeSeries(), new TimeSeries()];
@@ -94,6 +96,13 @@ function syncNS(nId, sId, dec, maxV) {
   n.value = v.toFixed(dec);
 }
 
+// Update global minLapSec from current UI value — called on every slider/input change
+function updateMinLapVar() {
+  var n = el('globalMinLapN');
+  var v = n ? parseFloat(n.value) : NaN;
+  if (!isNaN(v) && v >= 0) minLapSec = v;
+}
+
 // ── Frequency helpers ──────────────────────────────────────────────────────
 function updateFreq(pilot) {
   var b = el('bandSelect'+pilot).selectedIndex;
@@ -139,10 +148,12 @@ window.addEventListener('load', function() {
         pilotConfigs.push({freq:5658, minLap:100, enterRssi:120, exitRssi:100, name:''});
       }
 
-      // Global minLap: read from pilot 0
-      var gml = (pilotConfigs[0] && pilotConfigs[0].minLap) ? pilotConfigs[0].minLap / 10 : 10;
+      // Global minLap: read from pilot 0 (minLap stored as ×10 tenths)
+      var rawMl = pilotConfigs[0] ? pilotConfigs[0].minLap : 0;
+      var gml   = (rawMl > 0) ? rawMl / 10 : 10;
       el('globalMinLap').value  = gml;
       el('globalMinLapN').value = gml.toFixed(1);
+      minLapSec = gml;  // sync global variable
 
       for (var i = 0; i < NUM_PILOTS; i++) {
         var p = pilotConfigs[i];
@@ -267,20 +278,26 @@ function createRssiChart(pilot) {
 }
 
 // ── RSSI display update (200ms) ────────────────────────────────────────────
+var rssiDisplayed = [-1,-1,-1,-1];  // last written value per pilot — skip DOM write if unchanged
 setInterval(function() {
   var now = Date.now();
   for (var i = 0; i < NUM_PILOTS; i++) {
     var v = rssiValues[i];
 
-    var bar = el('rssiBar'+i), num = el('rssiNum'+i);
-    if (bar) bar.style.width = Math.min(100, v / 255 * 100) + '%';
-    if (num) num.textContent = v;
+    // Only write RSSI DOM elements when value has changed (avoids unnecessary layout)
+    if (v !== rssiDisplayed[i]) {
+      rssiDisplayed[i] = v;
+      var bar = el('rssiBar'+i), num = el('rssiNum'+i);
+      if (bar) bar.style.width = Math.min(100, v / 255 * 100) + '%';
+      if (num) num.textContent = v;
 
-    var cv = el('calibRssi'+i);
-    if (cv) cv.textContent = v;
+      var cv = el('calibRssi'+i);
+      if (cv) cv.textContent = v;
+    }
 
     rssiSeries[i].append(now, v);
-    updateChartLines(i);
+    // updateChartLines only needed when calib tab is open and chart exists
+    if (currentTab === 'calib') updateChartLines(i);
   }
 }, 200);
 
@@ -288,6 +305,18 @@ setInterval(function() {
 function updateBatteryDisplay(voltStr) {
   var bv1 = el('bvolt');     if (bv1) bv1.textContent = voltStr;
   var bv2 = el('bvoltRace'); if (bv2) bv2.textContent = voltStr;
+
+  // Low-voltage visual alert: turn red + blink when at or below alarm threshold
+  var alarmEl = el('alarmN');
+  var alarmV  = alarmEl ? parseFloat(alarmEl.value) : 0;
+  var dispV   = parseFloat(voltStr);
+  var isLow   = (alarmV > 0 && !isNaN(dispV) && dispV <= alarmV);
+  ['bvolt','bvoltRace','bvoltIcon','bvoltRaceIcon'].forEach(function(id) {
+    var el2 = el(id);
+    if (!el2) return;
+    if (isLow) el2.classList.add('bat-low');
+    else       el2.classList.remove('bat-low');
+  });
 }
 
 // Poll /status every 5 seconds for battery voltage (works with all firmware versions)
@@ -397,16 +426,36 @@ function saveGlobalConfig() {
 }
 
 // ── Race management ────────────────────────────────────────────────────────
+// Promise-based countdown speech — resolves when utterance ends (or immediately if no TTS)
+function speakSync(text) {
+  return new Promise(function(resolve) {
+    if (!window.speechSynthesis) { resolve(); return; }
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = 1.3; u.volume = 1;
+    u.onend = u.onerror = function() { resolve(); };
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  });
+}
+
 function startTimer() {
-  // Use real clock time for smooth, drift-free timer display
-  raceStartTime = Date.now();
-  timerInterval = setInterval(function() {
+  // raceStartTime must be set by the caller BEFORE DOM changes to avoid layout-delay offset
+  if (!raceStartTime) raceStartTime = Date.now();
+  var lastText  = '';
+  function tick() {
+    if (!raceStartTime) return;           // stopped
     var elapsed = Date.now() - raceStartTime;
-    var ms = Math.floor((elapsed % 1000) / 10); // centiseconds
+    var cs = Math.floor((elapsed % 1000) / 10);
     var s  = Math.floor(elapsed / 1000) % 60;
     var m  = Math.floor(elapsed / 60000);
-    el('timer').textContent = pad(m)+':'+pad(s)+':'+pad(ms);
-  }, 50);
+    var text = pad(m)+':'+pad(s)+':'+pad(cs);
+    if (text !== lastText) {              // skip DOM write if unchanged
+      el('timer').textContent = text;
+      lastText = text;
+    }
+    timerRAF = requestAnimationFrame(tick);
+  }
+  timerRAF = requestAnimationFrame(tick);
 }
 
 function pad(n) { return n < 10 ? '0'+n : ''+n; }
@@ -422,29 +471,37 @@ async function startRace() {
   var numEl   = el('countdownNum');
   overlay.style.display = 'flex';
 
-  var steps = [
-    { label: '3', speak: '3',       freq: 880,  dur: 120 },
-    { label: '2', speak: '2',       freq: 880,  dur: 120 },
-    { label: '1', speak: '1',       freq: 880,  dur: 120 },
-    { label: 'GO!', speak: 'スタート', freq: 1320, dur: 600 },
+  // 3, 2, 1 — speak each number and wait for speech to finish, then pad to 1 second
+  var countSteps = [
+    { label: '3', speak: '3', freq: 880,  dur: 120 },
+    { label: '2', speak: '2', freq: 880,  dur: 120 },
+    { label: '1', speak: '1', freq: 880,  dur: 120 },
   ];
-
-  for (var i = 0; i < steps.length; i++) {
-    var s = steps[i];
+  for (var i = 0; i < countSteps.length; i++) {
+    var s = countSteps[i];
     numEl.textContent = s.label;
     numEl.style.animation = 'none';
     void numEl.offsetWidth;
     numEl.style.animation = '';
     beep(s.dur, s.freq);
-    if (window.speechSynthesis) {
-      var u = new SpeechSynthesisUtterance(s.speak);
-      u.lang = 'ja-JP'; u.rate = 1.3; u.volume = 1;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
-    }
-    await sleep(1000);
+    var stepStart = Date.now();
+    await speakSync(s.speak);
+    await sleep(Math.max(0, 900 - (Date.now() - stepStart)));  // pad step to ~1 second
   }
 
+  // GO! — show, beep, fire speech WITHOUT waiting, then record start time & launch timer
+  numEl.textContent = 'GO!';
+  numEl.style.animation = 'none';
+  void numEl.offsetWidth;
+  numEl.style.animation = '';
+  beep(600, 1320);
+  // No TTS for GO! — any speech completion event firing after raceStartTime
+  // causes the rAF timer loop to freeze for 1-3 seconds on Chrome.
+  // Silence TTS engine completely before the timer starts.
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  // Record start time BEFORE any DOM changes to avoid layout-delay skewing the timer
+  raceStartTime = Date.now();
   overlay.style.display = 'none';
   startTimer();
   el('stopRaceButton').disabled = false;
@@ -452,7 +509,9 @@ async function startRace() {
 
 function stopRace() {
   speakImmediate('レース終了');
-  clearInterval(timerInterval);
+  cancelAnimationFrame(timerRAF);
+  timerRAF = null;
+  raceStartTime = null;
   el('timer').textContent = '00:00:00';
   fetch('/timer/stop', { method: 'POST' }).catch(function() {});
   el('stopRaceButton').disabled  = true;
@@ -473,20 +532,14 @@ function clearAllLaps() {
 }
 
 function addLap(pilotIdx, lapMs) {
+  // Minimum lap time filter — skip for holeshot (first crossing), apply from lap 1 onward
+  if (lapNos[pilotIdx] >= 0 && minLapSec > 0 && lapMs / 1000 < minLapSec) return;
+
   var lapNo  = ++lapNos[pilotIdx];
   var lapSec = lapMs / 1000;
   var lapStr = lapSec.toFixed(2);
   var laps   = lapTimesArr[pilotIdx];
   var name   = (pilotConfigs[pilotIdx] && pilotConfigs[pilotIdx].name) || ('Pilot '+(pilotIdx+1));
-
-  // Keep s2/s3 for announcer (internal only, not displayed in table)
-  var s2 = '', s3 = '';
-  if (laps.length >= 1 && lapNo > 0) {
-    s2 = (lapSec + laps[laps.length-1]).toFixed(2);
-  }
-  if (laps.length >= 2 && lapNo > 0) {
-    s3 = (lapSec + laps[laps.length-1] + laps[laps.length-2]).toFixed(2);
-  }
 
   laps.push(lapSec);
 
@@ -521,27 +574,50 @@ function addLap(pilotIdx, lapMs) {
     speakImmediate(name+' ゴール！ '+lapStr+'秒');
     showToast(name+' ゴール！ '+lapStr+'s', 3000);
   } else {
-    announceType(lapNo, lapStr, s2, s3, name, pilotIdx);
+    announceType(lapNo, lapStr, totalStr, name, pilotIdx);
   }
 }
 
-function announceType(lapNo, lapStr, s2, s3, name, pilotIdx) {
+function announceType(lapNo, lapStr, totalStr, name, pilotIdx) {
   var anVal = el('announcerSelect').value;
+  var hs = (lapNo === 0);
+  var lapLabel = hs ? 'ホールショット' : lapNo + '周';
+
   switch (anVal) {
+    case 'laptime':
+      // ラップタイム
+      speakJa(name + ' ' + (hs ? 'ホールショット ' : '') + lapStr + '秒');
+      break;
+
+    case 'lap_laptime':
+      // 周回数 & ラップタイム
+      speakJa(name + ' ' + lapLabel + ' ' + lapStr + '秒');
+      break;
+
+    case 'laptime_total':
+      // ラップタイム & 累計ラップ
+      if (hs) speakJa(name + ' ホールショット ' + lapStr + '秒');
+      else    speakJa(name + ' ' + lapStr + '秒 累計 ' + totalStr + '秒');
+      break;
+
+    case 'lap_total':
+      // 周回数 & 累計ラップ
+      if (hs) speakJa(name + ' ホールショット');
+      else    speakJa(name + ' ' + lapLabel + ' 累計 ' + totalStr + '秒');
+      break;
+
+    case 'lap_laptime_total':
+      // 周回数 & ラップタイム & 累計ラップ
+      if (hs) speakJa(name + ' ホールショット ' + lapStr + '秒');
+      else    speakJa(name + ' ' + lapLabel + ' ' + lapStr + '秒 累計 ' + totalStr + '秒');
+      break;
+
     case 'beep':
       beep(100, 330 + pilotIdx * 110);
       break;
-    case '1lap':
-      if (lapNo === 0) speakJa(name+' ホールショット '+lapStr+'秒');
-      else             speakJa(name+' ラップ'+lapNo+' '+lapStr+'秒');
-      break;
-    case '2lap':
-      if (lapNo === 0) speakJa(name+' ホールショット '+lapStr+'秒');
-      else if (s2)     speakJa(name+' 2ラップ '+s2+'秒');
-      break;
-    case '3lap':
-      if (lapNo === 0) speakJa(name+' ホールショット '+lapStr+'秒');
-      else if (s3)     speakJa(name+' 3ラップ '+s3+'秒');
+
+    case 'none':
+    default:
       break;
   }
 }
@@ -607,13 +683,27 @@ function processSpeech() {
 }
 
 // ── Beep ───────────────────────────────────────────────────────────────────
+// Singleton AudioContext — avoids repeated create/close GC stalls
+var _audioCtx = null;
+function getAudioCtx() {
+  try {
+    if (!_audioCtx || _audioCtx.state === 'closed') {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    // Resume if suspended (browser autoplay policy)
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    return _audioCtx;
+  } catch(e) { return null; }
+}
+
 function beep(duration, freq) {
   try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var ctx = getAudioCtx();
+    if (!ctx) return;
     var osc = ctx.createOscillator();
     osc.type = 'square'; osc.frequency.value = freq || 880;
     osc.connect(ctx.destination); osc.start();
-    setTimeout(function() { osc.stop(); ctx.close(); }, duration || 200);
+    osc.stop(ctx.currentTime + (duration || 200) / 1000);
   } catch(e) {}
 }
 
@@ -640,9 +730,14 @@ function beep(duration, freq) {
           rssiValues[i] = d.r[i];
         }
       }
-      // Battery voltage from SSE (v = raw value where raw/10 = volts)
+      // Battery voltage from SSE — throttle DOM update to once per second
+      // (SSE fires at 20/sec; calling updateBatteryDisplay every time = 120 DOM ops/sec → layout thrash)
       if (typeof d.v === 'number') {
-        updateBatteryDisplay((d.v / 10).toFixed(1) + 'v');
+        var nowMs = Date.now();
+        if (nowMs - lastBatUpdateMs >= 1000) {
+          lastBatUpdateMs = nowMs;
+          updateBatteryDisplay((d.v / 10).toFixed(1) + 'v');
+        }
       }
     } catch(err) {}
   });

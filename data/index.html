@@ -41,7 +41,7 @@
           <input type="number" id="totalLaps" min="0" max="99" value="0">
           <span class="hint">（0=無制限）</span>
           <span class="bat-sep">｜</span>
-          <span class="bat-label">🔋</span>
+          <span id="bvoltRaceIcon" class="bat-label">🔋</span>
           <span id="bvoltRace" class="value-display">--</span>
         </div>
       </div>
@@ -159,18 +159,20 @@
               <input type="range" id="alarmThreshold" min="0" max="4.2" step="0.1" value="3.6"
                 oninput="syncSN('alarmThreshold','alarmN',1)">
               <input type="number" id="alarmN" min="0" max="4.2" step="0.1" value="3.6"
-                oninput="syncNS('alarmN','alarmThreshold',1,4.2)">
+                onchange="syncNS('alarmN','alarmThreshold',1,4.2)">
               <span class="unit">v</span>
             </div>
           </div>
           <div class="config-row">
             <label>アナウンス種別</label>
             <select id="announcerSelect">
-              <option value="none">なし</option>
-              <option value="beep">ビープ音</option>
-              <option value="1lap">ラップタイム読み上げ</option>
-              <option value="2lap">2ラップ合計読み上げ</option>
-              <option value="3lap">3ラップ合計読み上げ</option>
+              <option value="laptime"           selected>ラップタイム</option>
+              <option value="lap_laptime"              >周回数&amp;ラップタイム</option>
+              <option value="laptime_total"            >ラップタイム&amp;累計ラップ</option>
+              <option value="lap_total"                >周回数&amp;累計ラップ</option>
+              <option value="lap_laptime_total"        >周回数&amp;ラップタイム&amp;累計ラップ</option>
+              <option value="beep"                     >ビープ音</option>
+              <option value="none"                     >なし</option>
             </select>
           </div>
           <div class="config-row">
@@ -179,22 +181,22 @@
               <input type="range" id="rate" min="0.5" max="2.0" step="0.1" value="1.0"
                 oninput="syncSN('rate','rateN',1)">
               <input type="number" id="rateN" min="0.5" max="2.0" step="0.1" value="1.0"
-                oninput="syncNS('rateN','rate',1,2.0)">
+                onchange="syncNS('rateN','rate',1,2.0)">
             </div>
           </div>
           <div class="config-row">
             <label>最小ラップ時間（全パイロット共通）</label>
             <div class="slider-num">
-              <input type="range" id="globalMinLap" min="1" max="60" step="0.5" value="10"
-                oninput="syncSN('globalMinLap','globalMinLapN',1)">
-              <input type="number" id="globalMinLapN" min="1" max="60" step="0.5" value="10"
-                oninput="syncNS('globalMinLapN','globalMinLap',1,60)">
+              <input type="range" id="globalMinLap" min="1" max="25" step="0.5" value="10"
+                oninput="syncSN('globalMinLap','globalMinLapN',1); updateMinLapVar()">
+              <input type="number" id="globalMinLapN" min="1" max="25" step="0.5" value="10"
+                onchange="syncNS('globalMinLapN','globalMinLap',1,25); updateMinLapVar()">
               <span class="unit">s</span>
             </div>
           </div>
           <div class="config-row">
             <label>バッテリー電圧</label>
-            <span id="bvolt" class="value-display">--</span>
+            <span id="bvoltIcon" class="bat-icon">🔋</span><span id="bvolt" class="value-display">--</span>
           </div>
         </div>
         <div class="voice-row">
@@ -332,7 +334,7 @@
                 <input type="range" id="enterRssi0" min="50" max="255" step="1" value="120"
                   oninput="syncCalibSlider(0,'enter')">
                 <input type="number" id="enterRssiN0" min="50" max="255" step="1" value="120"
-                  oninput="syncCalibNum(0,'enter')">
+                  onchange="syncCalibNum(0,'enter')">
               </div>
             </div>
             <div class="config-row">
@@ -341,7 +343,7 @@
                 <input type="range" id="exitRssi0" min="50" max="255" step="1" value="100"
                   oninput="syncCalibSlider(0,'exit')">
                 <input type="number" id="exitRssiN0" min="50" max="255" step="1" value="100"
-                  oninput="syncCalibNum(0,'exit')">
+                  onchange="syncCalibNum(0,'exit')">
               </div>
             </div>
           </div>
@@ -362,7 +364,7 @@
                 <input type="range" id="enterRssi1" min="50" max="255" step="1" value="120"
                   oninput="syncCalibSlider(1,'enter')">
                 <input type="number" id="enterRssiN1" min="50" max="255" step="1" value="120"
-                  oninput="syncCalibNum(1,'enter')">
+                  onchange="syncCalibNum(1,'enter')">
               </div>
             </div>
             <div class="config-row">
@@ -371,7 +373,7 @@
                 <input type="range" id="exitRssi1" min="50" max="255" step="1" value="100"
                   oninput="syncCalibSlider(1,'exit')">
                 <input type="number" id="exitRssiN1" min="50" max="255" step="1" value="100"
-                  oninput="syncCalibNum(1,'exit')">
+                  onchange="syncCalibNum(1,'exit')">
               </div>
             </div>
           </div>
@@ -392,7 +394,7 @@
                 <input type="range" id="enterRssi2" min="50" max="255" step="1" value="120"
                   oninput="syncCalibSlider(2,'enter')">
                 <input type="number" id="enterRssiN2" min="50" max="255" step="1" value="120"
-                  oninput="syncCalibNum(2,'enter')">
+                  onchange="syncCalibNum(2,'enter')">
               </div>
             </div>
             <div class="config-row">
@@ -401,7 +403,7 @@
                 <input type="range" id="exitRssi2" min="50" max="255" step="1" value="100"
                   oninput="syncCalibSlider(2,'exit')">
                 <input type="number" id="exitRssiN2" min="50" max="255" step="1" value="100"
-                  oninput="syncCalibNum(2,'exit')">
+                  onchange="syncCalibNum(2,'exit')">
               </div>
             </div>
           </div>
@@ -422,7 +424,7 @@
                 <input type="range" id="enterRssi3" min="50" max="255" step="1" value="120"
                   oninput="syncCalibSlider(3,'enter')">
                 <input type="number" id="enterRssiN3" min="50" max="255" step="1" value="120"
-                  oninput="syncCalibNum(3,'enter')">
+                  onchange="syncCalibNum(3,'enter')">
               </div>
             </div>
             <div class="config-row">
@@ -431,7 +433,7 @@
                 <input type="range" id="exitRssi3" min="50" max="255" step="1" value="100"
                   oninput="syncCalibSlider(3,'exit')">
                 <input type="number" id="exitRssiN3" min="50" max="255" step="1" value="100"
-                  oninput="syncCalibNum(3,'exit')">
+                  onchange="syncCalibNum(3,'exit')">
               </div>
             </div>
           </div>

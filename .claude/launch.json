@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Web UI Preview (data/)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8788", "--directory", "data"],
+      "port": 8788
+    },
+    {
+      "name": "Build & Upload Firmware (PhobosLT)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\pio.exe",
+      "runtimeArgs": ["run", "--target", "upload", "--environment", "PhobosLT"],
+      "port": 80
+    },
+    {
+      "name": "Upload Filesystem / Web UI (PhobosLT)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\pio.exe",
+      "runtimeArgs": ["run", "--target", "uploadfs", "--environment", "PhobosLT"],
+      "port": 80
+    },
+    {
+      "name": "Serial Monitor (PhobosLT)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\pio.exe",
+      "runtimeArgs": ["device", "monitor", "--environment", "PhobosLT"],
+      "port": 460800
+    },
+    {
+      "name": "Build Firmware Only (PhobosLT)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\pio.exe",
+      "runtimeArgs": ["run", "--environment", "PhobosLT"],
+      "port": 80
+    },
+    {
+      "name": "Build & Upload Firmware (ESP32C3)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\pio.exe",
+      "runtimeArgs": ["run", "--target", "upload", "--environment", "ESP32C3"],
+      "port": 80
+    },
+    {
+      "name": "Build & Upload Firmware (ESP32S3)",
+      "runtimeExecutable": "C:\\Users\\shige\\.platformio\\penv\\Scripts\\pio.exe",
+      "runtimeArgs": ["run", "--target", "upload", "--environment", "ESP32S3"],
+      "port": 80
+    }
+  ]
+}

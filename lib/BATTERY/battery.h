@@ -29,4 +29,5 @@ class BatteryMonitor {
     uint8_t add;
     Buzzer *buz;
     Led *led;
+    uint8_t lastVoltage = 0;  // cached voltage — same value used for display and alarm
 };

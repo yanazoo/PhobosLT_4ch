@@ -60,8 +60,12 @@ void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue) {
                 startLap();
             }
             break;
-        case RUNNING:
-            if ((currentTimeMs - startTimeMs) > conf->getMinLapMs(pilot)) {
+        case RUNNING: {
+            // Holeshot (first crossing, lapCount==0 before any wraparound):
+            // always capture — minLap guard does NOT apply.
+            // Subsequent laps: enforce minLap.
+            bool isHoleShot = (lapCount == 0 && !lapCountWraparound);
+            if (isHoleShot || (currentTimeMs - startTimeMs) > conf->getMinLapMs(pilot)) {
                 lapPeakCapture();
             }
 
@@ -70,6 +74,7 @@ void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue) {
                 startLap();
             }
             break;
+        }
         default:
             break;
     }
@@ -112,9 +117,13 @@ void LapTimer::finishLap() {
 }
 
 void LapTimer::setRssiOnly(uint8_t rssiValue) {
-    // Update filtered RSSI for display only — no lap detection
-    // Used to suppress false laps from adjacent-frequency bleed-through
+    // Update filtered RSSI for display only — no lap detection.
+    // Always reset rssiPeak: any call here means we are either in a settle window
+    // after a frequency switch, or we were frozen during another pilot's priority mode.
+    // In either case the peak value is stale/unreliable; resetting it unconditionally
+    // prevents handleLapTimerUpdate() from triggering a false lap when detection resumes.
     filteredRssi = round(filter.filter(rssiValue, 0));
+    rssiPeak = 0;
 }
 
 uint8_t LapTimer::getRssi() {
