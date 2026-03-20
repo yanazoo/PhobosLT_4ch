@@ -1,5 +1,7 @@
 # PhobosLT 4ch
 
+**4-channel FPV lap timer using a single ESP32 + RX5808 via Time Division Multiplexing (TDM)**
+
 4パイロット対応 FPVドローン ラップタイマー — RX5808 モジュール1個で4チャンネルを TDM スキャン
 
 > Inspired by [phobos-/PhobosLT](https://github.com/phobos-/PhobosLT) (single-pilot original)
