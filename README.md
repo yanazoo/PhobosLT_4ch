@@ -81,7 +81,7 @@ To set up the toolchain on your computer, follow these steps:
 1. Download and install [**VS Code**](https://code.visualstudio.com/).
 2. Open VS Code and click the Extensions icon in the left sidebar (**Manage Extensions**).
 3. Type `platformio` in the search box and install the extension (see the [PlatformIO install documentation](https://docs.platformio.org/en/latest/integration/ide/vscode.html) for details).
-4. Install [**Git**](https://git-scm.com/).
+4. Install [**Git**](https://github.com/git-guides/install-git).
 
 ### Flash Commands
 
@@ -111,7 +111,7 @@ pio run --target uploadfs   --environment ESP32S3
 
 | Race | Settings | Calibration |
 |---|---|---|
-| ![Race tab](images/screenshot_race.png) | ![Settings tab](images/screenshot_settings.png) | ![Calib tab](images/screenshot_calib.png) |
+| ![Race tab](images/LapTime.jpg) | ![Settings tab](images/cnfig.jpg) | ![Calib tab](images/RSSI.jpg) |
 
 > Screenshots taken from a smartphone browser connected to the PhobosLT access point.
 
