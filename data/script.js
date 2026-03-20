@@ -23,7 +23,9 @@ var rssiValues    = [0, 0, 0, 0];
 var lapNos        = [-1,-1,-1,-1];
 var lapTimesArr   = [[],[],[],[]];
 var timerRAF      = null;   // requestAnimationFrame handle for race timer
-var raceStartTime = null;  // Date.now() at race start for accurate timer
+var timerInterval = null;  // setInterval backup for timer (resilience against rAF throttling)
+var raceStartTime = null;  // Date.now() at race start (kept for compatibility)
+var raceStartPerf = null;  // performance.now() at race start (monotonic, sub-ms precision)
 var audioEnabled  = true;   // default ON
 var announcerRate = 1.0;
 var totalLaps     = 0;
@@ -426,36 +428,40 @@ function saveGlobalConfig() {
 }
 
 // ── Race management ────────────────────────────────────────────────────────
-// Promise-based countdown speech — resolves when utterance ends (or immediately if no TTS)
-function speakSync(text) {
-  return new Promise(function(resolve) {
-    if (!window.speechSynthesis) { resolve(); return; }
-    var u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ja-JP'; u.rate = 1.3; u.volume = 1;
-    u.onend = u.onerror = function() { resolve(); };
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  });
-}
 
 function startTimer() {
-  // raceStartTime must be set by the caller BEFORE DOM changes to avoid layout-delay offset
+  // Use performance.now() — monotonic clock, sub-ms precision, not affected by Date clamping.
+  // raceStartTime (Date.now()) is kept only for external compatibility.
   if (!raceStartTime) raceStartTime = Date.now();
-  var lastText  = '';
-  function tick() {
-    if (!raceStartTime) return;           // stopped
-    var elapsed = Date.now() - raceStartTime;
-    var cs = Math.floor((elapsed % 1000) / 10);
-    var s  = Math.floor(elapsed / 1000) % 60;
-    var m  = Math.floor(elapsed / 60000);
+  raceStartPerf = performance.now();
+
+  var timerEl  = el('timer');
+  var lastText = '';
+
+  function updateTimerDisplay() {
+    if (raceStartPerf === null) return;
+    var elapsed = performance.now() - raceStartPerf;
+    var ms = elapsed | 0;                 // truncate to whole ms
+    var cs = Math.floor((ms % 1000) / 10);
+    var s  = Math.floor(ms / 1000) % 60;
+    var m  = Math.floor(ms / 60000);
     var text = pad(m)+':'+pad(s)+':'+pad(cs);
-    if (text !== lastText) {              // skip DOM write if unchanged
-      el('timer').textContent = text;
+    if (text !== lastText) {
+      timerEl.textContent = text;
       lastText = text;
     }
+  }
+
+  function tick() {
+    if (raceStartPerf === null) return;
+    updateTimerDisplay();
     timerRAF = requestAnimationFrame(tick);
   }
   timerRAF = requestAnimationFrame(tick);
+
+  // Backup: setInterval at 50 ms keeps display updating even if rAF is throttled by the OS.
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimerDisplay, 50);
 }
 
 function pad(n) { return n < 10 ? '0'+n : ''+n; }
@@ -465,42 +471,36 @@ async function startRace() {
   clearAllLaps();
   totalLaps = parseInt(el('totalLaps').value) || 0;
 
+  // Cancel any queued TTS immediately (fire-and-forget — IPC response arrives during countdown).
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  speechQueue = []; isSpeaking = false;
+
   fetch('/timer/countdown', { method: 'POST' }).catch(function() {});
 
   var overlay = el('countdownOverlay');
   var numEl   = el('countdownNum');
   overlay.style.display = 'flex';
 
-  // 3, 2, 1 — speak each number and wait for speech to finish, then pad to 1 second
-  var countSteps = [
-    { label: '3', speak: '3', freq: 880,  dur: 120 },
-    { label: '2', speak: '2', freq: 880,  dur: 120 },
-    { label: '1', speak: '1', freq: 880,  dur: 120 },
-  ];
-  for (var i = 0; i < countSteps.length; i++) {
-    var s = countSteps[i];
-    numEl.textContent = s.label;
+  // 3, 2, 1 — visual only, fixed 900 ms per step.
+  // TTS is NOT awaited: awaiting speechSynthesis.onend causes its IPC completion
+  // callback to arrive on the main thread ~1–2 s after the race starts, blocking
+  // requestAnimationFrame and freezing the timer display at ~1.3 s.
+  var countLabels = ['3', '2', '1'];
+  for (var i = 0; i < countLabels.length; i++) {
+    numEl.textContent = countLabels[i];
     numEl.style.animation = 'none';
     void numEl.offsetWidth;
     numEl.style.animation = '';
-    beep(s.dur, s.freq);
-    var stepStart = Date.now();
-    await speakSync(s.speak);
-    await sleep(Math.max(0, 900 - (Date.now() - stepStart)));  // pad step to ~1 second
+    await sleep(900);
   }
 
-  // GO! — show, beep, fire speech WITHOUT waiting, then record start time & launch timer
   numEl.textContent = 'GO!';
   numEl.style.animation = 'none';
   void numEl.offsetWidth;
   numEl.style.animation = '';
   beep(600, 1320);
-  // No TTS for GO! — any speech completion event firing after raceStartTime
-  // causes the rAF timer loop to freeze for 1-3 seconds on Chrome.
-  // Silence TTS engine completely before the timer starts.
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
 
-  // Record start time BEFORE any DOM changes to avoid layout-delay skewing the timer
+  // Record start time BEFORE any DOM changes to avoid layout-delay skewing the timer.
   raceStartTime = Date.now();
   overlay.style.display = 'none';
   startTimer();
@@ -511,7 +511,10 @@ function stopRace() {
   speakImmediate('レース終了');
   cancelAnimationFrame(timerRAF);
   timerRAF = null;
+  clearInterval(timerInterval);
+  timerInterval = null;
   raceStartTime = null;
+  raceStartPerf = null;
   el('timer').textContent = '00:00:00';
   fetch('/timer/stop', { method: 'POST' }).catch(function() {});
   el('stopRaceButton').disabled  = true;
@@ -543,9 +546,14 @@ function addLap(pilotIdx, lapMs) {
 
   laps.push(lapSec);
 
-  // Cumulative total
+  // Cumulative total (kept for lap table column and announcer)
   var totalSec = laps.reduce(function(a, b) { return a + b; }, 0);
   var totalStr = totalSec.toFixed(2);
+
+  // Best lap time: minimum of real laps (lap 1+); fall back to holeshot if none yet
+  var realLaps = laps.slice(1);
+  var bestSec  = realLaps.length > 0 ? Math.min.apply(null, realLaps) : null;
+  var bestStr  = bestSec !== null ? bestSec.toFixed(2) : '--';
 
   var tb = document.querySelector('#lapTable'+pilotIdx+' tbody');
   if (!tb) return;
@@ -561,9 +569,20 @@ function addLap(pilotIdx, lapMs) {
 
   row.insertCell(2).textContent = totalStr+'s';
 
-  // Update pilot total display card
+  // Update pilot best-lap display card
   var ptEl = el('pilotTotal'+pilotIdx);
-  if (ptEl) ptEl.textContent = totalStr+'s';
+  if (ptEl && bestStr !== '--') ptEl.textContent = bestStr+'s';
+
+  // Highlight the best-lap row in the table (clear previous, mark current)
+  if (bestSec !== null && lapNo > 0) {
+    var allRows = document.querySelectorAll('#lapTable'+pilotIdx+' tbody tr');
+    allRows.forEach(function(r) { r.classList.remove('best-row'); });
+    // The best row's lap time cell matches bestStr+'s'
+    allRows.forEach(function(r) {
+      var tc = r.querySelector('.lap-time');
+      if (tc && tc.textContent === bestStr+'s') r.classList.add('best-row');
+    });
+  }
 
   // Lap count badge
   var badge = document.querySelector('#raceCard'+pilotIdx+' .pilot-lapcount');
@@ -683,15 +702,36 @@ function processSpeech() {
 }
 
 // ── Beep ───────────────────────────────────────────────────────────────────
-// Singleton AudioContext — avoids repeated create/close GC stalls
-var _audioCtx = null;
+// Singleton AudioContext — avoids repeated create/close GC stalls.
+//
+// Keep-alive oscillator: a 1 Hz oscillator at gain=0.0001 (-80 dB, inaudible)
+// keeps the audio session active on iOS/Android.  An all-zero silent buffer
+// may be detected as "no output" by iOS and still trigger audio-session
+// deactivation; a non-zero (though inaudible) signal prevents that.
+//
+// osc.onended disconnect: removes the node from the graph immediately when the
+// beep finishes, allowing GC without a stop-the-world pause.
+var _audioCtx  = null;
+var _keepOsc   = null;   // 1 Hz near-silent oscillator — prevents audio-session deactivation
+var _keepGain  = null;
+
 function getAudioCtx() {
   try {
     if (!_audioCtx || _audioCtx.state === 'closed') {
       _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Keep-alive: 1 Hz oscillator at -80 dB.  Non-zero samples prevent iOS from
+      // classifying the stream as silent and deactivating the audio hardware.
+      _keepOsc  = _audioCtx.createOscillator();
+      _keepGain = _audioCtx.createGain();
+      _keepGain.gain.value    = 0.0001;  // -80 dB — inaudible
+      _keepOsc.frequency.value = 1;      // 1 Hz — below hearing range
+      _keepOsc.connect(_keepGain);
+      _keepGain.connect(_audioCtx.destination);
+      _keepOsc.start();
     }
-    // Resume if suspended (browser autoplay policy)
-    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    // Resume if suspended (browser autoplay policy).
+    if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(function() {});
     return _audioCtx;
   } catch(e) { return null; }
 }
@@ -702,7 +742,10 @@ function beep(duration, freq) {
     if (!ctx) return;
     var osc = ctx.createOscillator();
     osc.type = 'square'; osc.frequency.value = freq || 880;
-    osc.connect(ctx.destination); osc.start();
+    osc.connect(ctx.destination);
+    // Fix B: disconnect immediately when done — prevents V8 audio-GC stall.
+    osc.onended = function() { try { osc.disconnect(); } catch(e) {} };
+    osc.start();
     osc.stop(ctx.currentTime + (duration || 200) / 1000);
   } catch(e) {}
 }
@@ -749,5 +792,40 @@ function beep(duration, freq) {
         addLap(d.p, d.t);
       }
     } catch(err) {}
+  });
+})();
+
+// ── Captive-portal focus guard ──────────────────────────────────────────────
+// iOS / Android captive-portal WebViews periodically auto-focus the first
+// <input> on the page without any user interaction.
+//
+// Strategy:
+//   1. Track genuine user gestures via pointerdown / touchstart / keydown
+//      directly on each input (not document-wide, so Tab-key navigation works).
+//   2. On focus, if no gesture preceded it, defer blur() via setTimeout(0).
+//      The defer is required because iOS sometimes re-focuses after a
+//      synchronous blur() — letting the event loop flush first prevents this.
+//   3. autocomplete="off" is also set in the HTML to further reduce
+//      browser-initiated auto-focus attempts.
+(function() {
+  window.addEventListener('load', function() {
+    document.querySelectorAll('#config input[type="text"]').forEach(function(inp) {
+      var gestured = false;
+
+      // Mark genuine user intent on this specific element
+      ['pointerdown', 'touchstart', 'mousedown', 'keydown'].forEach(function(type) {
+        inp.addEventListener(type, function() { gestured = true; }, true);
+      });
+
+      inp.addEventListener('focus', function() {
+        if (!gestured) {
+          // No user gesture on this element → captive-portal auto-focus.
+          // Defer so iOS cannot immediately re-focus after a sync blur().
+          var self = inp;
+          setTimeout(function() { try { self.blur(); } catch(e) {} }, 0);
+        }
+        gestured = false;   // consume — next focus needs a fresh gesture
+      });
+    });
   });
 })();

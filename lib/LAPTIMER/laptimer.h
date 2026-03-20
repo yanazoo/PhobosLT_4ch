@@ -19,8 +19,7 @@ class LapTimer {
     void init(Config *config, uint8_t pilotIndex, Buzzer *buzzer, Led *l);
     void start();
     void stop();
-    // Accept RSSI value from external scanner instead of reading directly
-    void handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue);
+    void handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue, bool isDominant);
     void setRssiOnly(uint8_t rssiValue);  // update display RSSI without lap detection
     uint8_t getRssi();
     uint32_t getLapTime();
@@ -45,10 +44,14 @@ class LapTimer {
 
     uint8_t rssiPeak;
     uint32_t rssiPeakTimeMs;
+    uint32_t peakEntryTimeMs = 0;   // millis() when filteredRssi first crossed enterRssi (for duration guard)
+    uint8_t exitConfirmCount = 0;   // consecutive samples below exitRssi required for lap detection
+    uint8_t peakDominantCount = 0;  // consecutive dominant samples seen above enterRssi
+    bool    peakValidated = false;  // true once ≥2 consecutive dominant readings confirm the peak is genuine
 
     bool lapAvailable = false;
 
-    void lapPeakCapture();
+    void lapPeakCapture(bool isDominant, uint8_t rawRssi);
     bool lapPeakCaptured();
 
     void startLap();

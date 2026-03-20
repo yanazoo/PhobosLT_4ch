@@ -126,7 +126,6 @@ main {
   color: var(--accent);
   letter-spacing: 3px;
   contain: layout style;  /* isolate timer from DOM thrash outside this element */
-  will-change: contents;  /* hint browser to keep this on its own compositing layer */
 }
 .race-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .lap-count-row {
@@ -235,6 +234,8 @@ main {
 .lapTable tbody tr:hover { background: var(--surface2); }
 .lapTable tbody tr.hs-row td { color: var(--warn); font-style: italic; }
 .lapTable tbody tr.hs-row td.lap-time { color: var(--warn); }
+.lapTable tbody tr.best-row td { color: #4caf50; font-weight: bold; }
+.lapTable tbody tr.best-row td.lap-time { color: #4caf50; }
 
 /* ========== Buttons ========== */
 button {
