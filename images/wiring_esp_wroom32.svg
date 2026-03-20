@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="760" height="545" viewBox="0 0 760 545" xmlns="http://www.w3.org/2000/svg">
+  <rect width="760" height="545" fill="#1a1a2e"/>
+
+  <!-- Title -->
+  <text x="380" y="42" text-anchor="middle" font-size="18" font-weight="bold" fill="#c8d3f5" font-family="Arial, sans-serif">ESP-WROOM-32 — Wiring Diagram</text>
+
+  <!-- ======= MCU BOX ======= -->
+  <rect x="20" y="65" width="225" height="320" rx="8" fill="#212140" stroke="#5e81f4" stroke-width="2"/>
+  <text x="132" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#82aaff" font-family="Arial, sans-serif">ESP-WROOM-32</text>
+
+  <!-- MCU pin labels -->
+  <text x="218" y="124" text-anchor="end" font-size="11" fill="#73daca" font-family="Arial, sans-serif">3V3</text>
+  <line x1="220" y1="120" x2="240" y2="120" stroke="#73daca" stroke-width="2"/>
+
+  <text x="218" y="154" text-anchor="end" font-size="11" fill="#7a7a9a" font-family="Arial, sans-serif">GND</text>
+  <line x1="220" y1="150" x2="240" y2="150" stroke="#7a7a9a" stroke-width="2"/>
+
+  <text x="218" y="184" text-anchor="end" font-size="11" fill="#4fc1ff" font-family="Arial, sans-serif">GPIO33</text>
+  <line x1="220" y1="180" x2="240" y2="180" stroke="#4fc1ff" stroke-width="2"/>
+
+  <text x="218" y="214" text-anchor="end" font-size="11" fill="#f07178" font-family="Arial, sans-serif">GPIO19</text>
+  <line x1="220" y1="210" x2="240" y2="210" stroke="#f07178" stroke-width="2"/>
+
+  <text x="218" y="244" text-anchor="end" font-size="11" fill="#ff9e64" font-family="Arial, sans-serif">GPIO22</text>
+  <line x1="220" y1="240" x2="240" y2="240" stroke="#ff9e64" stroke-width="2"/>
+
+  <text x="218" y="274" text-anchor="end" font-size="11" fill="#ffc777" font-family="Arial, sans-serif">GPIO23</text>
+  <line x1="220" y1="270" x2="240" y2="270" stroke="#ffc777" stroke-width="2"/>
+
+  <text x="218" y="304" text-anchor="end" font-size="11" fill="#ffd700" font-family="Arial, sans-serif">GPIO35</text>
+  <line x1="220" y1="300" x2="240" y2="300" stroke="#ffd700" stroke-width="2"/>
+
+  <text x="218" y="334" text-anchor="end" font-size="11" fill="#c099ff" font-family="Arial, sans-serif">GPIO21</text>
+  <line x1="220" y1="330" x2="240" y2="330" stroke="#c099ff" stroke-width="2"/>
+
+  <text x="218" y="364" text-anchor="end" font-size="11" fill="#3ee5a4" font-family="Arial, sans-serif">GPIO27</text>
+  <line x1="220" y1="360" x2="240" y2="360" stroke="#3ee5a4" stroke-width="2"/>
+
+  <!-- ======= RX5808 BOX ======= -->
+  <rect x="500" y="65" width="230" height="235" rx="8" fill="#212140" stroke="#ff9e64" stroke-width="2"/>
+  <text x="615" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#ff9e64" font-family="Arial, sans-serif">RX5808</text>
+  <text x="615" y="108" text-anchor="middle" font-size="10" fill="#888" font-family="Arial, sans-serif">(SPI mode modified)</text>
+
+  <text x="514" y="124" font-size="11" fill="#73daca" font-family="Arial, sans-serif">VCC (3.3V)</text>
+  <text x="514" y="154" font-size="11" fill="#7a7a9a" font-family="Arial, sans-serif">GND</text>
+  <text x="514" y="184" font-size="11" fill="#4fc1ff" font-family="Arial, sans-serif">RSSI (analog out)</text>
+  <text x="514" y="214" font-size="11" fill="#f07178" font-family="Arial, sans-serif">DATA (SPI MOSI)</text>
+  <text x="514" y="244" font-size="11" fill="#ff9e64" font-family="Arial, sans-serif">SELECT (SPI CS)</text>
+  <text x="514" y="274" font-size="11" fill="#ffc777" font-family="Arial, sans-serif">CLK (SPI clock)</text>
+
+  <!-- Direct connection wires -->
+  <line x1="240" y1="120" x2="500" y2="120" stroke="#73daca" stroke-width="2"/>
+  <line x1="240" y1="150" x2="500" y2="150" stroke="#7a7a9a" stroke-width="2"/>
+  <line x1="240" y1="180" x2="500" y2="180" stroke="#4fc1ff" stroke-width="2"/>
+  <line x1="240" y1="210" x2="500" y2="210" stroke="#f07178" stroke-width="2"/>
+  <line x1="240" y1="240" x2="500" y2="240" stroke="#ff9e64" stroke-width="2"/>
+  <line x1="240" y1="270" x2="500" y2="270" stroke="#ffc777" stroke-width="2"/>
+
+  <!-- ======= Battery Voltage BOX ======= -->
+  <rect x="500" y="318" width="230" height="58" rx="8" fill="#212140" stroke="#ffd700" stroke-width="2"/>
+  <text x="615" y="340" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffd700" font-family="Arial, sans-serif">Battery Voltage</text>
+  <text x="514" y="362" font-size="10" fill="#ffd700" font-family="Arial, sans-serif">ADC in (voltage divider)</text>
+
+  <line x1="240" y1="300" x2="455" y2="300" stroke="#ffd700" stroke-width="2"/>
+  <line x1="455" y1="300" x2="455" y2="348" stroke="#ffd700" stroke-width="2"/>
+  <line x1="455" y1="348" x2="500" y2="348" stroke="#ffd700" stroke-width="2"/>
+
+  <!-- ======= LED BOX ======= -->
+  <rect x="500" y="395" width="230" height="58" rx="8" fill="#212140" stroke="#c099ff" stroke-width="2"/>
+  <text x="615" y="417" text-anchor="middle" font-size="12" font-weight="bold" fill="#c099ff" font-family="Arial, sans-serif">LED</text>
+  <text x="514" y="439" font-size="10" fill="#c099ff" font-family="Arial, sans-serif">anode + (via 100 Ω resistor)</text>
+
+  <line x1="240" y1="330" x2="463" y2="330" stroke="#c099ff" stroke-width="2"/>
+  <line x1="463" y1="330" x2="463" y2="424" stroke="#c099ff" stroke-width="2"/>
+  <line x1="463" y1="424" x2="500" y2="424" stroke="#c099ff" stroke-width="2"/>
+
+  <!-- ======= BUZZER BOX ======= -->
+  <rect x="500" y="472" width="230" height="58" rx="8" fill="#212140" stroke="#3ee5a4" stroke-width="2"/>
+  <text x="615" y="494" text-anchor="middle" font-size="12" font-weight="bold" fill="#3ee5a4" font-family="Arial, sans-serif">Buzzer</text>
+  <text x="514" y="516" font-size="10" fill="#3ee5a4" font-family="Arial, sans-serif">+ signal pin</text>
+
+  <line x1="240" y1="360" x2="471" y2="360" stroke="#3ee5a4" stroke-width="2"/>
+  <line x1="471" y1="360" x2="471" y2="501" stroke="#3ee5a4" stroke-width="2"/>
+  <line x1="471" y1="501" x2="500" y2="501" stroke="#3ee5a4" stroke-width="2"/>
+</svg>

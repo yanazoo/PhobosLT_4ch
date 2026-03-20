@@ -57,6 +57,8 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 | LED | D1 | 2 |
 | Battery voltage | D0 | 1 |
 
+![XIAO ESP32-S3 Wiring](images/wiring_xiao_esp32s3.svg)
+
 #### ESP-WROOM-32
 
 | Function | GPIO |
@@ -68,6 +70,8 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 | Buzzer | 27 |
 | LED | 21 |
 | Battery voltage | 35 |
+
+![ESP-WROOM-32 Wiring](images/wiring_esp_wroom32.svg)
 
 ---
 
@@ -105,6 +109,14 @@ pio run --target uploadfs   --environment ESP32S3
 3. **Settings tab** — set pilot names, frequencies, RSSI thresholds
 4. **Calib tab** — adjust Enter/Exit RSSI thresholds while watching live RSSI near the gate
 5. **Race tab** — press Start and begin timing
+
+### Screenshots
+
+| Race | Settings | Calibration |
+|---|---|---|
+| ![Race tab](images/screenshot_race.png) | ![Settings tab](images/screenshot_settings.png) | ![Calib tab](images/screenshot_calib.png) |
+
+> Screenshots taken from a smartphone browser connected to the PhobosLT access point.
 
 ### RSSI Threshold Guide
 
