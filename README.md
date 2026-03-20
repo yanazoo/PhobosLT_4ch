@@ -79,8 +79,8 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 To set up the toolchain on your computer, follow these steps:
 
 1. Download and install [**VS Code**](https://code.visualstudio.com/).
-2. Open VS Code and click the Extensions icon in the left sidebar (**Manage Extensions**).
-3. Type `platformio` in the search box and install the extension (see the [PlatformIO install documentation](https://docs.platformio.org/en/latest/integration/ide/vscode.html) for details).
+2. Open VS Code and click the Extensions icon in the right-side toolbar (**Manage Extensions**).
+3. Type `platformio` in the search box and install the extension (see the [PlatformIO install docs](https://docs.platformio.org/en/latest/integration/ide/vscode.html) for details).
 4. Install [**Git**](https://github.com/git-guides/install-git).
 
 ### Flash Commands
@@ -102,7 +102,7 @@ pio run --target uploadfs   --environment ESP32S3
 ## Usage
 
 1. After flashing, connect to Wi-Fi AP **`PhobosLT`** (password: `phoboslt`)
-2. Open `20.0.0.1` in your browser
+2. Open [http://20.0.0.1](http://20.0.0.1) in your browser
 3. **Settings tab** — set pilot names, frequencies, RSSI thresholds
 4. **Calib tab** — adjust Enter/Exit RSSI thresholds while watching live RSSI near the gate
 5. **Race tab** — press Start and begin timing
