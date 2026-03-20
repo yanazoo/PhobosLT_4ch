@@ -2,7 +2,6 @@
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
-#include <esp_wifi.h>
 
 #include "debug.h"
 
@@ -36,9 +35,6 @@ void Webserver::init(Config *config, LapTimer *lapTimers, BatteryMonitor *batMon
     WiFi.persistent(false);
     WiFi.disconnect();
     WiFi.mode(WIFI_OFF);
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_LR);
-    esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_LR);
     if (conf->getSsid()[0] == 0) {
         changeMode = WIFI_AP;
     } else {
@@ -153,6 +149,7 @@ void Webserver::handleWebUpdate(uint32_t currentTimeMs) {
                 wifiMode = WIFI_AP;
                 WiFi.setHostname(wifi_hostname);
                 WiFi.mode(wifiMode);
+                WiFi.setTxPower(WIFI_POWER_19_5dBm);
                 changeTimeMs = currentTimeMs;
                 WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
                 WiFi.softAP(wifi_ap_ssid.c_str(), wifi_ap_password);
