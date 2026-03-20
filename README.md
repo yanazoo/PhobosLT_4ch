@@ -57,8 +57,6 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 | LED | D1 | 2 |
 | Battery voltage | D0 | 1 |
 
-![XIAO ESP32-S3 Wiring](images/wiring_xiao_esp32s3.svg)
-
 #### ESP-WROOM-32
 
 | Function | GPIO |
@@ -71,7 +69,6 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 | LED | 21 |
 | Battery voltage | 35 |
 
-![ESP-WROOM-32 Wiring](images/wiring_esp_wroom32.svg)
 
 ---
 
