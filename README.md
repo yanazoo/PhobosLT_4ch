@@ -151,5 +151,5 @@ MIT License
 
 ## クレジット
 
-- オリジナル設計：[phobos-/PhobosLT](https://github.com/phobos-/PhobosLT)
+- オリジナル設計：[phobos-/PhobosLT](https://github.com/phobos-/PhobosLT) — Copyright © 2023 Paweł Stefański (MIT License)
 - 4ch TDM 実装：yanazoo
