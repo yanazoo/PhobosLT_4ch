@@ -491,6 +491,7 @@ async function startRace() {
     numEl.style.animation = 'none';
     void numEl.offsetWidth;
     numEl.style.animation = '';
+    beep(120, 880);
     await sleep(900);
   }
 
