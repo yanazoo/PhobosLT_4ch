@@ -38,7 +38,7 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 
 | Part | Notes |
 |---|---|
-| ESP32 or XIAO ESP32-S3 | Recommended: XIAO ESP32-S3 |
+| ESP-WROOM-32 or XIAO ESP32-S3 | Recommended: XIAO ESP32-S3 |
 | RX5808 5.8GHz video receiver | SPI-mode modified |
 | Buzzer (active or passive) | Optional |
 | LED | Optional |
@@ -57,7 +57,7 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 | LED | D1 | 2 |
 | Battery voltage | D0 | 1 |
 
-#### ESP32 DevKit
+#### ESP-WROOM-32
 
 | Function | GPIO |
 |---|---|
@@ -75,15 +75,62 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 
 Requires [PlatformIO](https://platformio.org/).
 
-```bash
-# Flash firmware
-pio run --target upload --environment PhobosLT
+### Toolchain Configuration
 
-# Flash filesystem (Web UI)
-pio run --target uploadfs --environment PhobosLT
+#### ESP-WROOM-32 (`PhobosLT` environment)
+
+```ini
+[env:PhobosLT]
+framework = arduino
+platform = espressif32@6.9.0
+board = esp32dev
+board_build.filesystem = littlefs
+upload_speed = 460800
+monitor_speed = 460800
+board_build.f_cpu = 240000000L
+lib_deps =
+    https://github.com/mathieucarbou/AsyncTCP#v3.2.14
+    https://github.com/mathieucarbou/ESPAsyncWebServer#v3.3.21
+    bblanchon/ArduinoJson @7.2.0
+build_flags =
+    -DCONFIG_ASYNC_TCP_EVENT_QUEUE_SIZE=256
 ```
 
-For XIAO ESP32-S3, use `--environment ESP32S3`.
+#### XIAO ESP32-S3 (`ESP32S3` environment)
+
+```ini
+[env:ESP32S3]
+framework = arduino
+platform = espressif32@6.9.0
+board = seeed_xiao_esp32s3
+board_build.filesystem = littlefs
+upload_speed = 460800
+monitor_speed = 115200
+board_build.f_cpu = 240000000L
+lib_deps =
+    https://github.com/mathieucarbou/AsyncTCP#v3.2.14
+    https://github.com/mathieucarbou/ESPAsyncWebServer#v3.3.21
+    bblanchon/ArduinoJson @7.2.0
+build_flags =
+    -DCONFIG_ASYNC_TCP_EVENT_QUEUE_SIZE=256
+    -DESP32S3
+    -DARDUINO_USB_MODE=1
+    -DARDUINO_USB_CDC_ON_BOOT=1
+```
+
+### Flash Commands
+
+```bash
+# ESP-WROOM-32: erase → firmware → filesystem
+pio run --target erase      --environment PhobosLT
+pio run --target upload     --environment PhobosLT
+pio run --target uploadfs   --environment PhobosLT
+
+# XIAO ESP32-S3: erase → firmware → filesystem
+pio run --target erase      --environment ESP32S3
+pio run --target upload     --environment ESP32S3
+pio run --target uploadfs   --environment ESP32S3
+```
 
 ---
 
