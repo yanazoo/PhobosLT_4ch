@@ -73,50 +73,14 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 
 ## Build & Flash
 
-Requires [PlatformIO](https://platformio.org/).
+### Toolchain Setup
 
-### Toolchain Configuration
+To set up the toolchain on your computer, follow these steps:
 
-#### ESP-WROOM-32 (`PhobosLT` environment)
-
-```ini
-[env:PhobosLT]
-framework = arduino
-platform = espressif32@6.9.0
-board = esp32dev
-board_build.filesystem = littlefs
-upload_speed = 460800
-monitor_speed = 460800
-board_build.f_cpu = 240000000L
-lib_deps =
-    https://github.com/mathieucarbou/AsyncTCP#v3.2.14
-    https://github.com/mathieucarbou/ESPAsyncWebServer#v3.3.21
-    bblanchon/ArduinoJson @7.2.0
-build_flags =
-    -DCONFIG_ASYNC_TCP_EVENT_QUEUE_SIZE=256
-```
-
-#### XIAO ESP32-S3 (`ESP32S3` environment)
-
-```ini
-[env:ESP32S3]
-framework = arduino
-platform = espressif32@6.9.0
-board = seeed_xiao_esp32s3
-board_build.filesystem = littlefs
-upload_speed = 460800
-monitor_speed = 115200
-board_build.f_cpu = 240000000L
-lib_deps =
-    https://github.com/mathieucarbou/AsyncTCP#v3.2.14
-    https://github.com/mathieucarbou/ESPAsyncWebServer#v3.3.21
-    bblanchon/ArduinoJson @7.2.0
-build_flags =
-    -DCONFIG_ASYNC_TCP_EVENT_QUEUE_SIZE=256
-    -DESP32S3
-    -DARDUINO_USB_MODE=1
-    -DARDUINO_USB_CDC_ON_BOOT=1
-```
+1. Download and install [**VS Code**](https://code.visualstudio.com/).
+2. Open VS Code and click the Extensions icon in the left sidebar (**Manage Extensions**).
+3. Type `platformio` in the search box and install the extension (see the [PlatformIO install documentation](https://docs.platformio.org/en/latest/integration/ide/vscode.html) for details).
+4. Install [**Git**](https://git-scm.com/).
 
 ### Flash Commands
 
