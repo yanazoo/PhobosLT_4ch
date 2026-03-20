@@ -177,21 +177,21 @@ void Config::setDefaults(void) {
     memset(&conf, 0, sizeof(conf));
     conf.version = CONFIG_VERSION | CONFIG_MAGIC;
 
-    // Default frequencies: R1, R2, R4, R7 (common race frequencies)
-    const uint16_t defaultFreqs[NUM_PILOTS] = {5658, 5695, 5769, 5880};
+    // Default frequencies: R5, R4, R3, R2
+    const uint16_t defaultFreqs[NUM_PILOTS] = {5806, 5769, 5732, 5695};
     const char* defaultNames[NUM_PILOTS] = {"Pilot 1", "Pilot 2", "Pilot 3", "Pilot 4"};
 
     for (uint8_t i = 0; i < NUM_PILOTS; i++) {
         conf.pilots[i].frequency = defaultFreqs[i];
-        conf.pilots[i].minLap = 100;  // 10.0s
-        conf.pilots[i].enterRssi = 120;
-        conf.pilots[i].exitRssi = 100;
+        conf.pilots[i].minLap = 60;   // 6.0s
+        conf.pilots[i].enterRssi = 115;
+        conf.pilots[i].exitRssi = 112;
         strlcpy(conf.pilots[i].pilotName, defaultNames[i], sizeof(conf.pilots[i].pilotName));
     }
 
-    conf.alarm = 36;
-    conf.announcerType = 2;
-    conf.announcerRate = 10;
+    conf.alarm = 32;          // 3.2V
+    conf.announcerType = 0;   // laptime
+    conf.announcerRate = 11;  // 1.1x
     strlcpy(conf.ssid, "", sizeof(conf.ssid));
     strlcpy(conf.password, "", sizeof(conf.password));
 

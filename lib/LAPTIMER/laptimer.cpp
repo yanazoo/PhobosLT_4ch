@@ -2,18 +2,18 @@
 
 #include "debug.h"
 
-// Kalman steady-state gain K≈0.70 at TDM scan rate (~21 ms/pilot).
-//   τ = T/K = 21 ms / 0.70 ≈ 30 ms  — fastest practical in 4ch TDM.
-//   Peak capture in 100 ms crossing (~5 scans): 1 - 0.30^5 = 99.8%  → filtered peak ≈124 (raw 130).
+// EMA (Exponential Moving Average) inter-round smoothing.
+// Fills the ~20 ms TDM gap between readings of the same pilot:
+//   filteredRssi = α × rssiValue + (1-α) × filteredRssi
 //
-//   Riccati solution (kalman.cpp convention: R=process noise, Q=measurement noise, C=A=1):
-//     p = (R + sqrt(R² + 4RQ)) / 2  →  K_ss = p / (p + Q)
-//     Target K_ss = 0.70, Q = 20.0  →  R = 32.67
+// EMA_ALPHA (0–10, representing α×10):
+//   10 → α=1.0  no smoothing (current reading only)
+//    7 → α=0.7  light smoothing — spike(130) from baseline(70) → 112, below enterRssi=120 ✓
+//    5 → α=0.5  moderate smoothing
+//    3 → α=0.3  heavy smoothing (slower to react)
 //
-//   Raceband (37 MHz spacing) fully satisfies the ≥20 MHz channel separation requirement.
-//
-const float KALMAN_MEAS_NOISE = 20.0f;   // Q: measurement noise
-const float KALMAN_PROC_NOISE = 32.67f;  // R: process noise  → K_ss ≈ 0.70, τ ≈ 30 ms
+// Start with 7. Increase toward 10 if fast drones are missed; decrease toward 5 if noise persists.
+#define EMA_ALPHA  4   // α = EMA_ALPHA / 10
 
 // Exit confirmation: require this many consecutive samples below exitRssi before counting a lap.
 // At ~16 ms/pilot, EXIT_CONFIRM_SAMPLES=2 → ~32 ms sustained drop required.
@@ -52,9 +52,6 @@ void LapTimer::init(Config *config, uint8_t pilotIndex, Buzzer *buzzer, Led *l) 
     pilot = pilotIndex;
     buz = buzzer;
     led = l;
-
-    filter.setMeasurementNoise(KALMAN_MEAS_NOISE);
-    filter.setProcessNoise(KALMAN_PROC_NOISE);
 
     stop();
     filteredRssi = 0;
@@ -97,7 +94,8 @@ void LapTimer::stop() {
 }
 
 void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue, bool isDominant) {
-    filteredRssi = round(filter.filter(rssiValue, 0));
+    // EMA: blend new reading with previous value to smooth across the 20 ms TDM gap.
+    filteredRssi = ((uint16_t)rssiValue * EMA_ALPHA + (uint16_t)filteredRssi * (10 - EMA_ALPHA)) / 10;
 
     switch (state) {
         case STOPPED:
@@ -133,6 +131,7 @@ void LapTimer::lapPeakCapture(bool isDominant, uint8_t rawRssi) {
     uint8_t enterRssi = conf->getEnterRssi(pilot);
 
     if (isDominant && filteredRssi >= enterRssi) {
+        // filteredRssi is the 3-read average from main.cpp — no Kalman lag.
         // Record the moment filteredRssi first crossed enterRssi (for duration guard).
         if (peakEntryTimeMs == 0) peakEntryTimeMs = millis();
 

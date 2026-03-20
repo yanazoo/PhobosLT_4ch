@@ -147,12 +147,12 @@ window.addEventListener('load', function() {
     .then(function(cfg) {
       pilotConfigs = cfg.pilots || [];
       while (pilotConfigs.length < NUM_PILOTS) {
-        pilotConfigs.push({freq:5658, minLap:100, enterRssi:120, exitRssi:100, name:''});
+        pilotConfigs.push({freq:5806, minLap:60, enterRssi:115, exitRssi:112, name:''});
       }
 
       // Global minLap: read from pilot 0 (minLap stored as ×10 tenths)
       var rawMl = pilotConfigs[0] ? pilotConfigs[0].minLap : 0;
-      var gml   = (rawMl > 0) ? rawMl / 10 : 10;
+      var gml   = (rawMl > 0) ? rawMl / 10 : 6;
       el('globalMinLap').value  = gml;
       el('globalMinLapN').value = gml.toFixed(1);
       minLapSec = gml;  // sync global variable
@@ -163,10 +163,10 @@ window.addEventListener('load', function() {
         el('pname'+i).value = p.name || '';
         setBandChan(i, p.freq || 5658);
 
-        el('enterRssi'+i).value  = p.enterRssi || 120;
-        el('enterRssiN'+i).value = p.enterRssi || 120;
-        el('exitRssi'+i).value   = p.exitRssi  || 100;
-        el('exitRssiN'+i).value  = p.exitRssi  || 100;
+        el('enterRssi'+i).value  = p.enterRssi || 115;
+        el('enterRssiN'+i).value = p.enterRssi || 115;
+        el('exitRssi'+i).value   = p.exitRssi  || 112;
+        el('exitRssiN'+i).value  = p.exitRssi  || 112;
 
         updateRaceCard(i);
         var cn = el('calibName'+i);
@@ -196,13 +196,13 @@ function syncCalibSlider(pilot, type) {
   if (isEnter) {
     var exitS = el('exitRssi'+pilot), exitN = el('exitRssiN'+pilot);
     if (parseInt(exitS.value) >= val) {
-      exitS.value = Math.max(50, val - 5);
+      exitS.value = Math.max(50, val - 3);
       exitN.value = exitS.value;
     }
   } else {
     var entS = el('enterRssi'+pilot), entN = el('enterRssiN'+pilot);
     if (parseInt(entS.value) <= val) {
-      entS.value = Math.min(255, val + 5);
+      entS.value = Math.min(255, val + 3);
       entN.value = entS.value;
     }
   }
@@ -472,8 +472,19 @@ async function startRace() {
   totalLaps = parseInt(el('totalLaps').value) || 0;
 
   // Cancel any queued TTS immediately (fire-and-forget — IPC response arrives during countdown).
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
-  speechQueue = []; isSpeaking = false;
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    speechQueue = []; isSpeaking = false;
+    // Prime the TTS engine during user gesture (Chrome/Android bug: first speak() call
+    // sometimes never fires onend, leaving isSpeaking stuck=true for the entire race).
+    // Speaking a zero-volume utterance here warms up the engine so the first real
+    // lap announcement fires correctly.
+    var _primer = new SpeechSynthesisUtterance('\u200b');
+    _primer.volume = 0; _primer.lang = 'ja-JP';
+    window.speechSynthesis.speak(_primer);
+  } else {
+    speechQueue = []; isSpeaking = false;
+  }
 
   fetch('/timer/countdown', { method: 'POST' }).catch(function() {});
 
@@ -700,6 +711,11 @@ function processSpeech() {
   u.onend  = function() { isSpeaking = false; processSpeech(); };
   u.onerror = function() { isSpeaking = false; processSpeech(); };
   window.speechSynthesis.speak(u);
+  // Safety timeout: if onend/onerror never fires (Chrome first-call bug),
+  // reset isSpeaking so subsequent announcements are not permanently blocked.
+  setTimeout(function() {
+    if (isSpeaking) { isSpeaking = false; processSpeech(); }
+  }, Math.max(4000, text.length * 250));
 }
 
 // ── Beep ───────────────────────────────────────────────────────────────────

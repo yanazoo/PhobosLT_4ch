@@ -12,12 +12,10 @@
 // no extra skip cycles needed. Every read after the delay goes straight into
 // handleLapTimerUpdate so rssiPeak is never forcibly reset between rounds.
 
-#define SCAN_SETTLE_MS    3   // PLL settle time (ms). RX5808 typical lock = 3.5 ms; 3 ms gives
-                              // ~86% lock quality but shortens the TDM round from 24 ms to 16 ms.
-                              // The Kalman filter absorbs the occasional slightly-off reading.
-                              // At 150 km/h a drone crosses a 0.35 m detection zone in ~8 ms;
-                              // the shorter TDM period improves per-pass detection probability
-                              // from ~35 % (5 ms settle) to ~53 % (3 ms settle).
+#define SCAN_SETTLE_MS    5   // PLL settle time (ms). RX5808 typical lock = 3.5 ms.
+                              // 3 ms: TDM round ~16 ms but PLL not fully settled → noisy RSSI → false laps.
+                              // 5 ms: TDM round ~24 ms, PLL settled → good balance of accuracy vs speed.
+                              // 6 ms: cleaner RSSI but inter-pilot crosstalk increased → worse overall.
 
 // Dominance check: this pilot's raw RSSI must exceed all other pilots' filtered RSSI by at least
 // DOMINANCE_DELTA to allow peak capture. Prevents RF front-end saturation from a nearby drone
@@ -98,7 +96,10 @@ void loop() {
         delay(SCAN_SETTLE_MS);  // wait for PLL to lock
     }
 
-    uint16_t rawRssi = analogRead(PIN_RX5808_RSSI);
+    // Average 3 consecutive reads. EMA in laptimer.cpp handles inter-round smoothing.
+    uint32_t rssiSum = 0;
+    for (int r = 0; r < 3; r++) rssiSum += analogRead(PIN_RX5808_RSSI);
+    uint16_t rawRssi = rssiSum / 3;
     if (rawRssi > 2047) rawRssi = 2047;
     uint8_t rssi = rawRssi >> 3;
 
