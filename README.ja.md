@@ -136,7 +136,7 @@ pio run --target uploadfs   --environment ESP32S3
 
 ## 使い方
 
-1. ESP32 に書き込み後、Wi-Fi アクセスポイント **`PhobosLT`** に接続
+1. ESP32 に書き込み後、Wi-Fi アクセスポイント **`PhobosLT`** に接続（パスワード：`phoboslt`）
 2. ブラウザで `192.168.4.1` を開く
 3. **設定タブ** でパイロット名・周波数・RSSI 閾値を設定
 4. **キャリブタブ** でゲート付近の RSSI を確認しながら Enter/Exit しきい値を調整
