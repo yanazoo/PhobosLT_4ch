@@ -149,10 +149,10 @@ void Webserver::handleWebUpdate(uint32_t currentTimeMs) {
                 wifiMode = WIFI_AP;
                 WiFi.setHostname(wifi_hostname);
                 WiFi.mode(wifiMode);
-                WiFi.setTxPower(WIFI_POWER_19_5dBm);
                 changeTimeMs = currentTimeMs;
                 WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
                 WiFi.softAP(wifi_ap_ssid.c_str(), wifi_ap_password);
+                WiFi.setTxPower(WIFI_POWER_19_5dBm);
                 startServices();
                 buz->beep(1000);
                 led->on(1000);
