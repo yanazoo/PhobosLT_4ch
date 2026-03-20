@@ -704,34 +704,15 @@ function processSpeech() {
 
 // ── Beep ───────────────────────────────────────────────────────────────────
 // Singleton AudioContext — avoids repeated create/close GC stalls.
-//
-// Keep-alive oscillator: a 1 Hz oscillator at gain=0.0001 (-80 dB, inaudible)
-// keeps the audio session active on iOS/Android.  An all-zero silent buffer
-// may be detected as "no output" by iOS and still trigger audio-session
-// deactivation; a non-zero (though inaudible) signal prevents that.
-//
 // osc.onended disconnect: removes the node from the graph immediately when the
 // beep finishes, allowing GC without a stop-the-world pause.
-var _audioCtx  = null;
-var _keepOsc   = null;   // 1 Hz near-silent oscillator — prevents audio-session deactivation
-var _keepGain  = null;
+var _audioCtx = null;
 
 function getAudioCtx() {
   try {
     if (!_audioCtx || _audioCtx.state === 'closed') {
       _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      // Keep-alive: 1 Hz oscillator at -80 dB.  Non-zero samples prevent iOS from
-      // classifying the stream as silent and deactivating the audio hardware.
-      _keepOsc  = _audioCtx.createOscillator();
-      _keepGain = _audioCtx.createGain();
-      _keepGain.gain.value    = 0.0001;  // -80 dB — inaudible
-      _keepOsc.frequency.value = 1;      // 1 Hz — below hearing range
-      _keepOsc.connect(_keepGain);
-      _keepGain.connect(_audioCtx.destination);
-      _keepOsc.start();
     }
-    // Resume if suspended (browser autoplay policy).
     if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(function() {});
     return _audioCtx;
   } catch(e) { return null; }
