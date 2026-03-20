@@ -6,35 +6,34 @@
 
 /*
 ## Pinout ##
-| ESP32 | RX5808 |
-| :------------- |:-------------|
-| 33 | RSSI |
-| GND | GND |
-| 19 | CH1 (DATA) |
-| 22 | CH2 (SEL) |
-| 23 | CH3 (CLK) |
-| 3V3 | +5V |
 
-* **Led** goes to pin 21 and GND
-* The optional **Buzzer** goes to pin 27 and GND
+### ESP32
+| ESP32 GPIO | XIAO label | RX5808 |
+|:-----------|:-----------|:-------|
+| 33         | —          | RSSI   |
+| 19         | —          | CH1 (DATA) |
+| 22         | —          | CH2 (SEL)  |
+| 23         | —          | CH3 (CLK)  |
+| GND        | GND        | GND    |
+| 3V3        | 3V3        | +5V    |
+* LED → GPIO21 / Buzzer → GPIO27
+
+### XIAO ESP32-S3
+| GPIO | XIAO label | 接続先 |
+|:-----|:-----------|:-------|
+| 3    | D2         | RX5808 RSSI |
+| 5    | D4         | RX5808 CH1 (DATA) |
+| 6    | D5         | RX5808 CH2 (SEL)  |
+| 4    | D3         | RX5808 CH3 (CLK)  |
+| 9    | D10        | Buzzer |
+| 2    | D1         | LED    |
+| 1    | D0         | VBAT   |
+| GND  | GND        | GND    |
+| 3V3  | 3V3        | +5V    |
 */
 
-// ESP32-C3
-#if defined(ESP32C3)
-
-#define PIN_LED 1
-#define PIN_VBAT 0
-#define VBAT_SCALE 2
-#define VBAT_ADD 2
-#define PIN_RX5808_RSSI 3
-#define PIN_RX5808_DATA 6     // CH1
-#define PIN_RX5808_SELECT 7   // CH2
-#define PIN_RX5808_CLOCK 4    // CH3
-#define PIN_BUZZER 5
-#define BUZZER_INVERTED false
-
-// ESP32-S3
-#elif defined(ESP32S3)
+// ESP32-S3 (XIAO ESP32-S3)
+#if defined(ESP32S3)
 
 #define PIN_LED 2
 #define PIN_VBAT 1
