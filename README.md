@@ -101,7 +101,7 @@ pio run --target uploadfs   --environment ESP32S3
 
 ## Usage
 
-1. After flashing, connect to Wi-Fi AP **`PhobosLT`** (password: `phoboslt`)
+1. After flashing, connect to Wi-Fi AP **`PhobosLT4ch_XXXX`** (XXXX = last 4 chars of MAC address, password: `phoboslt`)
 2. Open [http://20.0.0.1](http://20.0.0.1) in your browser
 3. **Settings tab** — set pilot names, frequencies, RSSI thresholds
 4. **Calib tab** — adjust Enter/Exit RSSI thresholds while watching live RSSI near the gate
