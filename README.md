@@ -20,7 +20,7 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 
 - **4-pilot simultaneous timing** — single RX5808 module
 - **TDM round-robin scanning** — ~20ms cycle, all pilots scanned equally
-- **EMA filter** — inter-round noise smoothing (α=0.4 default)
+- **EMA filter** — inter-round noise smoothing (α=0.35 default)
 - **3-sample ADC averaging** — reduces in-slot ADC noise
 - **Dominance check** — prevents false laps from RF saturation of nearby pilots
 - **Duration guard** — rejects ambient RF signals sustained longer than 500ms
@@ -136,7 +136,7 @@ Lap time : previous peak timestamp → current peak timestamp
 **False detection prevention:**
 - **Dominance check** — only triggers when this pilot's RSSI exceeds all others by DOMINANCE_DELTA (10)
 - **Duration guard** — rejects signals staying above Enter RSSI for more than 500ms (ambient RF)
-- **EMA filter** — α=0.4 smooths noise across the 20ms TDM gap
+- **EMA filter** — α=0.35 smooths noise across the 20ms TDM gap
 
 ---
 
@@ -145,7 +145,7 @@ Lap time : previous peak timestamp → current peak timestamp
 | Parameter | File | Default | Description |
 |---|---|---|---|
 | `SCAN_SETTLE_MS` | `src/main.cpp` | 5 | PLL settle time (ms) |
-| `EMA_ALPHA` | `lib/LAPTIMER/laptimer.cpp` | 4 | EMA gain (0–10) |
+| `EMA_ALPHA` | `lib/LAPTIMER/laptimer.cpp` | 7 | EMA gain (0–20, α=EMA_ALPHA/20) |
 | `DOMINANCE_DELTA` | `src/main.cpp` | 10 | Dominance margin |
 | `MAX_PEAK_DURATION_MS` | `lib/LAPTIMER/laptimer.cpp` | 500 | Duration guard (ms) |
 | `EXIT_CONFIRM_SAMPLES` | `lib/LAPTIMER/laptimer.cpp` | 2 | Exit confirmation samples |
@@ -158,7 +158,7 @@ Lap time : previous peak timestamp → current peak timestamp
 |---|---|---|
 | Pilots | 1 | 4 |
 | RX5808 | 1 module, fixed channel | 1 module, TDM 4ch |
-| Filter | None | EMA (α=0.4) |
+| Filter | None | EMA (α=0.35) |
 | False detection prevention | None | Dominance check + duration guard |
 | Web UI | Yes | Redesigned for 4 pilots |
 | Voice | — | Web Speech API |
