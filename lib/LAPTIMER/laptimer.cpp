@@ -6,14 +6,14 @@
 // Fills the ~20 ms TDM gap between readings of the same pilot:
 //   filteredRssi = α × rssiValue + (1-α) × filteredRssi
 //
-// EMA_ALPHA (0–10, representing α×10):
-//   10 → α=1.0  no smoothing (current reading only)
-//    7 → α=0.7  light smoothing — spike(130) from baseline(70) → 112, below enterRssi=120 ✓
-//    5 → α=0.5  moderate smoothing
-//    3 → α=0.3  heavy smoothing (slower to react)
+// EMA_ALPHA (0–20, representing α×20):
+//   20 → α=1.0  no smoothing (current reading only)
+//    8 → α=0.40  previous default
+//    7 → α=0.35  current setting
+//    6 → α=0.30  heavy smoothing (slower to react)
 //
-// Start with 7. Increase toward 10 if fast drones are missed; decrease toward 5 if noise persists.
-#define EMA_ALPHA  4   // α = EMA_ALPHA / 10
+// Increase toward 20 if fast drones are missed; decrease toward 4 if noise persists.
+#define EMA_ALPHA  7   // α = EMA_ALPHA / 20
 
 // Exit confirmation: require this many consecutive samples below exitRssi before counting a lap.
 // At ~16 ms/pilot, EXIT_CONFIRM_SAMPLES=2 → ~32 ms sustained drop required.
@@ -95,7 +95,7 @@ void LapTimer::stop() {
 
 void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue, bool isDominant) {
     // EMA: blend new reading with previous value to smooth across the 20 ms TDM gap.
-    filteredRssi = ((uint16_t)rssiValue * EMA_ALPHA + (uint16_t)filteredRssi * (10 - EMA_ALPHA)) / 10;
+    filteredRssi = ((uint16_t)rssiValue * EMA_ALPHA + (uint16_t)filteredRssi * (20 - EMA_ALPHA)) / 20;
 
     switch (state) {
         case STOPPED:
