@@ -13,12 +13,16 @@
 //    6 → α=0.30  heavy smoothing (slower to react)
 //
 // Increase toward 20 if fast drones are missed; decrease toward 4 if noise persists.
-#define EMA_ALPHA  7   // α = EMA_ALPHA / 20
+// EMA（削除）
+// #define EMA_ALPHA  7   // α = EMA_ALPHA / 20
+// スルーレートリミッタ（新）
+#define SLEW_RISE  10
+#define SLEW_FALL  1
 
 // Exit confirmation: require this many consecutive samples below exitRssi before counting a lap.
 // At ~16 ms/pilot, EXIT_CONFIRM_SAMPLES=2 → ~32 ms sustained drop required.
 // Prevents false laps from single TDM noise samples or RF saturation transients.
-#define EXIT_CONFIRM_SAMPLES  2
+#define EXIT_CONFIRM_SAMPLES  1
 
 // Duration guard: maximum time (ms) the filtered RSSI may stay above enterRssi in a single
 // peak-capture event before the peak is invalidated as ambient RF.
@@ -95,7 +99,13 @@ void LapTimer::stop() {
 
 void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs, uint8_t rssiValue, bool isDominant) {
     // EMA: blend new reading with previous value to smooth across the 20 ms TDM gap.
-    filteredRssi = ((uint16_t)rssiValue * EMA_ALPHA + (uint16_t)filteredRssi * (20 - EMA_ALPHA)) / 20;
+    // EMA（削除）
+    // filteredRssi = ((uint16_t)rssiValue * EMA_ALPHA + (uint16_t)filteredRssi * (20 - EMA_ALPHA)) / 20;
+    // スルーレートリミッタ（新）
+    int16_t diff = (int16_t)rssiValue - (int16_t)filteredRssi;
+    if      (diff >  (int16_t)SLEW_RISE) filteredRssi += SLEW_RISE;
+    else if (diff < -(int16_t)SLEW_FALL) filteredRssi -= SLEW_FALL;
+    else                                 filteredRssi  = rssiValue;
 
     switch (state) {
         case STOPPED:
