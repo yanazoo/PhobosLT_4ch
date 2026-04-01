@@ -20,7 +20,7 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 
 - **4-pilot simultaneous timing** — single RX5808 module
 - **TDM round-robin scanning** — ~20ms cycle, all pilots scanned equally
-- **EMA filter** — inter-round noise smoothing (α=0.35 default)
+- **Slew Rate Limiter** — asymmetric RSSI smoothing (fast rise / slow fall) across the TDM gap
 - **3-sample ADC averaging** — reduces in-slot ADC noise
 - **Dominance check** — prevents false laps from RF saturation of nearby pilots
 - **Duration guard** — rejects ambient RF signals sustained longer than 500ms
@@ -69,21 +69,52 @@ The ESP32 acts as a Wi-Fi access point, providing a browser-based UI for configu
 | LED | 21 |
 | Battery voltage | 35 |
 
-
 ---
 
 ## Build & Flash
 
 ### Toolchain Setup
 
-To set up the toolchain on your computer, follow these steps:
+Follow these steps to set up the build environment on your computer.
 
-1. Download and install [**VS Code**](https://code.visualstudio.com/).
-2. Open VS Code and click the Extensions icon in the right-side toolbar (**Manage Extensions**).
-3. Type `platformio` in the search box and install the extension (see the [PlatformIO install docs](https://docs.platformio.org/en/latest/integration/ide/vscode.html) for details).
-4. Install [**Git**](https://github.com/git-guides/install-git).
+#### Step 1 — Install VS Code
+
+Download and install [**Visual Studio Code**](https://code.visualstudio.com/) for your operating system (Windows / macOS / Linux).
+
+#### Step 2 — Install the PlatformIO Extension
+
+1. Open VS Code.
+2. Click the **Extensions** icon in the left sidebar (or press `Ctrl+Shift+X`).
+3. Type `PlatformIO IDE` in the search box.
+4. Click **Install** on the PlatformIO IDE extension.
+5. Wait for the installation to complete, then **restart VS Code** when prompted.
+
+> For detailed instructions see the [PlatformIO install docs](https://docs.platformio.org/en/latest/integration/ide/vscode.html).
+
+#### Step 3 — Install Git
+
+Download and install [**Git**](https://github.com/git-guides/install-git) for your operating system.
+
+> On Windows, accept the default options during installation.
+
+#### Step 4 — Clone this Repository
+
+1. Open a terminal (VS Code Terminal: `Ctrl+`` ` or use Git Bash).
+2. Run:
+
+```bash
+git clone https://github.com/yanazoo/PhobosLT_4ch.git
+cd PhobosLT_4ch
+```
+
+#### Step 5 — Open in VS Code
+
+Open the cloned `PhobosLT_4ch` folder in VS Code (`File → Open Folder`).
+PlatformIO will automatically download all required libraries and toolchains on first open.
 
 ### Flash Commands
+
+Connect your device via USB, then run in the VS Code PlatformIO terminal:
 
 ```bash
 # ESP-WROOM-32: erase → firmware → filesystem
@@ -129,14 +160,14 @@ pio run --target uploadfs   --environment ESP32S3
 ```
 Approach : filteredRssi crosses Enter RSSI → start peak capture
 Peak     : filteredRssi continues to update maximum
-Exit     : filteredRssi drops below Exit RSSI for 2 consecutive samples → lap recorded
+Exit     : filteredRssi drops below Exit RSSI for EXIT_CONFIRM_SAMPLES consecutive samples → lap recorded
 Lap time : previous peak timestamp → current peak timestamp
 ```
 
 **False detection prevention:**
 - **Dominance check** — only triggers when this pilot's RSSI exceeds all others by DOMINANCE_DELTA (10)
 - **Duration guard** — rejects signals staying above Enter RSSI for more than 500ms (ambient RF)
-- **EMA filter** — α=0.35 smooths noise across the 20ms TDM gap
+- **Slew Rate Limiter** — fast rise (SLEW_RISE=10) / slow fall (SLEW_FALL=1) smooths TDM gap noise
 
 ---
 
@@ -145,10 +176,11 @@ Lap time : previous peak timestamp → current peak timestamp
 | Parameter | File | Default | Description |
 |---|---|---|---|
 | `SCAN_SETTLE_MS` | `src/main.cpp` | 5 | PLL settle time (ms) |
-| `EMA_ALPHA` | `lib/LAPTIMER/laptimer.cpp` | 7 | EMA gain (0–20, α=EMA_ALPHA/20) |
+| `SLEW_RISE` | `lib/LAPTIMER/laptimer.cpp` | 10 | Max RSSI rise per TDM cycle |
+| `SLEW_FALL` | `lib/LAPTIMER/laptimer.cpp` | 1 | Max RSSI fall per TDM cycle |
 | `DOMINANCE_DELTA` | `src/main.cpp` | 10 | Dominance margin |
 | `MAX_PEAK_DURATION_MS` | `lib/LAPTIMER/laptimer.cpp` | 500 | Duration guard (ms) |
-| `EXIT_CONFIRM_SAMPLES` | `lib/LAPTIMER/laptimer.cpp` | 2 | Exit confirmation samples |
+| `EXIT_CONFIRM_SAMPLES` | `lib/LAPTIMER/laptimer.cpp` | 1 | Exit confirmation samples |
 
 ---
 
@@ -158,7 +190,7 @@ Lap time : previous peak timestamp → current peak timestamp
 |---|---|---|
 | Pilots | 1 | 4 |
 | RX5808 | 1 module, fixed channel | 1 module, TDM 4ch |
-| Filter | None | EMA (α=0.35) |
+| Filter | None | Slew Rate Limiter (rise=10 / fall=1) |
 | False detection prevention | None | Dominance check + duration guard |
 | Web UI | Yes | Redesigned for 4 pilots |
 | Voice | — | Web Speech API |
