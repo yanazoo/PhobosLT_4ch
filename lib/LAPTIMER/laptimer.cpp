@@ -16,8 +16,8 @@
 // EMA（削除）
 // #define EMA_ALPHA  7   // α = EMA_ALPHA / 20
 // スルーレートリミッタ（新）
-#define SLEW_RISE  10
-#define SLEW_FALL  1
+#define SLEW_RISE  25
+#define SLEW_FALL  10
 
 // Exit confirmation: require this many consecutive samples below exitRssi before counting a lap.
 // At ~16 ms/pilot, EXIT_CONFIRM_SAMPLES=2 → ~32 ms sustained drop required.
