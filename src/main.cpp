@@ -12,7 +12,7 @@
 // no extra skip cycles needed. Every read after the delay goes straight into
 // handleLapTimerUpdate so rssiPeak is never forcibly reset between rounds.
 
-#define SCAN_SETTLE_MS    5   // PLL settle time (ms). RX5808 typical lock = 3.5 ms.
+#define SCAN_SETTLE_MS    8   // PLL settle time (ms). RX5808 typical lock = 3.5 ms.
                               // 3 ms: TDM round ~16 ms but PLL not fully settled → noisy RSSI → false laps.
                               // 5 ms: TDM round ~24 ms, PLL settled → good balance of accuracy vs speed.
                               // 6 ms: cleaner RSSI but inter-pilot crosstalk increased → worse overall.
